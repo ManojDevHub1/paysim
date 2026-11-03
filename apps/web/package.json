@@ -1,6 +1,7 @@
 {
   "name": "@paysim/web",
   "version": "1.0.0",
+  "license": "MIT",
   "description": "PAYSIM React + Vite frontend application",
   "type": "module",
   "scripts": {

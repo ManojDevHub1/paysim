@@ -1,6 +1,7 @@
 {
   "name": "@paysim/domain",
   "version": "1.0.0",
+  "license": "MIT",
   "description": "Pure payment and order business logic entities, types and state transitions",
   "type": "module",
   "main": "./dist/index.js",

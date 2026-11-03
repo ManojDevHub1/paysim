@@ -1,0 +1,49 @@
+### 1. Exchange Bootstrap Control Token for Session
+# @name sessionExchange
+POST http://127.0.0.1:8787/control/v1/session/exchange
+Content-Type: application/json
+
+{
+  "token": "{{bootstrapToken}}"
+}
+
+###
+
+### 2. Rotate / Disclose Native API Bearer Token
+# @name rotateNativeToken
+POST http://127.0.0.1:8787/control/v1/credentials/native/rotate
+X-Control-Session: {{sessionToken}}
+X-PaySim-CSRF: {{csrfToken}}
+Content-Type: application/json
+
+{}
+
+###
+
+### 3. Create an Order in INR
+# @name createOrder
+POST http://127.0.0.1:8787/api/v1/orders
+Authorization: Bearer {{nativeToken}}
+Content-Type: application/json
+
+{
+  "amount": 50000,
+  "currency": "INR",
+  "receipt": "rcpt_dev_1001",
+  "notes": {
+    "customer": "Jane Doe",
+    "purpose": "Local Gateway Testing"
+  }
+}
+
+###
+
+### 3. Retrieve the Created Order
+GET http://127.0.0.1:8787/api/v1/orders/{{orderId}}
+Authorization: Bearer {{nativeToken}}
+
+###
+
+### 4. List All Orders
+GET http://127.0.0.1:8787/api/v1/orders?limit=10
+Authorization: Bearer {{nativeToken}}

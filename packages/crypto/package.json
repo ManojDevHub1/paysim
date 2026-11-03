@@ -1,6 +1,7 @@
 {
   "name": "@paysim/crypto",
   "version": "1.0.0",
+  "license": "MIT",
   "description": "Cryptographic HMAC, constant-time comparison, and memory zeroization utilities",
   "type": "module",
   "main": "./dist/index.js",

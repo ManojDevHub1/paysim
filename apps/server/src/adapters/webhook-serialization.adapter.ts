@@ -5,7 +5,7 @@ import type {
   NativePaymentObject,
   NativeOrderObject,
 } from '@paysim/contracts';
-import type { DomainEventDraft } from '@paysim/domain';
+import type { DomainEventDraft, CanonicalEvent } from '@paysim/domain';
 
 /**
  * Result of Razorpay Compatibility Webhook Serialization.
@@ -142,4 +142,27 @@ export function serializeToCompatWebhookEvent(
 export function formatCompatWebhookEvent(draft: DomainEventDraft): CompatWebhookEvent | null {
   const result = serializeToCompatWebhookEvent(draft);
   return result.supported ? result.event : null;
+}
+
+/**
+ * Converts an immutable CanonicalEvent back to a DomainEventDraft for serialization.
+ */
+export function canonicalEventToDraft(event: CanonicalEvent): DomainEventDraft {
+  const payload = event.canonicalPayload as Record<string, unknown>;
+  const object = (payload.object ?? payload) as NativePaymentObject | NativeOrderObject;
+
+  return {
+    id: event.id,
+    type: event.type as DomainEventDraft['type'],
+    orderVersion: event.orderVersion,
+    paymentVersion: event.paymentVersion,
+    correlationId: event.correlationId,
+    causationId: event.causationId,
+    createdAt: event.createdAt,
+    simulated: true,
+    livemode: false,
+    schemaVersion: 1,
+    canonicalPayload: event.canonicalPayload,
+    data: { object },
+  };
 }

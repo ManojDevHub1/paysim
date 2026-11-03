@@ -11,6 +11,7 @@ import {
   type RetryDeliveryResponse,
   type DeliveryStatus,
   type WebhookMode,
+  type RuntimeListenerConfig,
   CreateWebhookEndpointRequestSchema,
   UpdateWebhookEndpointRequestSchema,
   RotateEndpointSecretRequestSchema,
@@ -21,10 +22,12 @@ import type { CanonicalEvent } from '@paysim/domain';
 import {
   type CommitCoordinator,
   type WebhookSecretVault,
+  DeliveryBodyVault,
   IdempotencyStore,
   computeIdempotencyFingerprint,
   type StoredIdempotencyRecord,
 } from '@paysim/storage-memory';
+import { canonicalJsonStringify } from '@paysim/shared';
 import {
   createValidationError,
   createNotFoundError,
@@ -32,7 +35,14 @@ import {
   createIdempotencyKeyReusedError,
   createResourceLimitReachedError,
 } from '../errors/application.error.js';
-import { SUPPORTED_COMPAT_EVENT_TYPES } from '../../adapters/webhook-serialization.adapter.js';
+import {
+  SUPPORTED_COMPAT_EVENT_TYPES,
+  serializeToNativeWebhookEvent,
+  formatCompatWebhookEvent,
+  canonicalEventToDraft,
+} from '../../adapters/webhook-serialization.adapter.js';
+import { validateDispatchDestination } from '../../webhook-engine/dispatcher-security.js';
+import { isManualRetryEligible, getManualAttemptsCount } from '../../webhook-engine/retry-policy.js';
 
 export interface CreateEndpointOptions {
   readonly request: CreateWebhookEndpointRequest;
@@ -65,7 +75,10 @@ export interface RetryDeliveryOptions {
 export class WebhookService {
   constructor(
     private readonly coordinator: CommitCoordinator,
-    private readonly secretVault: WebhookSecretVault
+    private readonly secretVault: WebhookSecretVault,
+    private readonly bodyVault?: DeliveryBodyVault,
+    private readonly onDeliveryEnqueued?: (deliveryId: string, initiator?: 'automatic' | 'manual') => void,
+    private readonly runtimeConfig?: RuntimeListenerConfig
   ) {}
 
   /**
@@ -78,6 +91,15 @@ export class WebhookService {
       throw createValidationError('Invalid webhook endpoint creation request', parsed.error.errors);
     }
     const data = parsed.data;
+
+    // Validate loopback destination against runtime listener configuration (e.g. dynamic backend/frontend ports)
+    const destinationValidation = validateDispatchDestination(data.url, this.runtimeConfig);
+    if (!destinationValidation.valid) {
+      throw createValidationError(
+        destinationValidation.error ?? 'Destination URL is prohibited by loopback security policy.',
+        [{ path: ['url'], message: destinationValidation.error ?? 'Invalid destination' }]
+      );
+    }
 
     const endpointId = generateId('we_ps');
     const secret = data.secret ?? `whsec_${randomBytes(24).toString('hex')}`;
@@ -143,6 +165,17 @@ export class WebhookService {
       throw createValidationError('Invalid webhook endpoint update request', parsed.error.errors);
     }
     const data = parsed.data;
+
+    // Validate loopback destination if url is updated
+    if (data.url) {
+      const destinationValidation = validateDispatchDestination(data.url, this.runtimeConfig);
+      if (!destinationValidation.valid) {
+        throw createValidationError(
+          destinationValidation.error ?? 'Destination URL is prohibited by loopback security policy.',
+          [{ path: ['url'], message: destinationValidation.error ?? 'Invalid destination' }]
+        );
+      }
+    }
 
     const locks = [`endpoint:${endpointId}`];
 
@@ -331,38 +364,68 @@ export class WebhookService {
     const deliveryId = options.deliveryId;
     const locks = [`delivery:${deliveryId}`];
 
-    return this.coordinator.transaction({ locks }, async (ctx) => {
+    const result = await this.coordinator.transaction({ locks }, async (ctx) => {
       const delivery = ctx.deliveries.get(deliveryId);
       if (!delivery) {
         throw createNotFoundError('WebhookDelivery', deliveryId);
       }
 
-      if (delivery.status === 'in_progress') {
+      // Check manual retry eligibility (only failed or exhausted with remaining manual budget)
+      const manualAttempts = getManualAttemptsCount(delivery.attempts, delivery.maxAttempts);
+      const eligibility = isManualRetryEligible(delivery.status, manualAttempts);
+      if (!eligibility.eligible) {
         throw createInvalidStateTransitionError(
           'WebhookDelivery',
           delivery.status,
           'pending',
-          'Delivery is currently in progress.'
+          eligibility.reason ?? 'Delivery is not eligible for manual retry.'
+        );
+      }
+
+      // Verify that the original endpoint secret version is still retained in the vault
+      if (!this.secretVault.hasSecret(delivery.endpointId, delivery.secretVersion)) {
+        throw createInvalidStateTransitionError(
+          'WebhookDelivery',
+          delivery.status,
+          'pending',
+          `Signing secret version ${delivery.secretVersion} for endpoint '${delivery.endpointId}' was purged.`
+        );
+      }
+
+      // Verify that serialized request body snapshot is available
+      if (this.bodyVault && !this.bodyVault.hasBody(deliveryId)) {
+        throw createInvalidStateTransitionError(
+          'WebhookDelivery',
+          delivery.status,
+          'pending',
+          `Serialized body snapshot for delivery '${deliveryId}' is unavailable in vault.`
         );
       }
 
       const scheduledAt = new Date().toISOString();
-      const updatedDelivery: WebhookDeliveryEntity = {
+      const updatedDelivery: WebhookDeliveryEntity & { pendingInitiator?: 'manual' | 'automatic' } = {
         ...delivery,
         status: 'pending',
         nextRetryAt: scheduledAt,
         updatedAt: scheduledAt,
+        pendingInitiator: 'manual',
       };
 
-      ctx.deliveries.update(updatedDelivery);
+      ctx.deliveries.update(updatedDelivery as WebhookDeliveryEntity);
 
       return {
         deliveryId,
-        status: 'pending',
+        status: 'pending' as DeliveryStatus,
         attemptNumber: delivery.attempts.length + 1,
         scheduledAt,
       };
     });
+
+    if (this.onDeliveryEnqueued) {
+      this.onDeliveryEnqueued(deliveryId, 'manual');
+    }
+
+    return result;
   }
 
   /**
@@ -388,15 +451,49 @@ export class WebhookService {
       return [];
     }
 
-    const orderId = (event.canonicalPayload as Record<string, unknown>).orderId as string ?? 'ord_unknown';
-    const paymentId = (event.canonicalPayload as Record<string, unknown>).paymentId as string | undefined;
+    const payloadObj = event.canonicalPayload as Record<string, unknown>;
+    let orderId = (payloadObj.orderId as string) || '';
+    let paymentId: string | null = (payloadObj.paymentId as string) || null;
 
-    return this.coordinator.transaction({}, async (ctx) => {
-      const createdDeliveries: WebhookDeliveryEntity[] = [];
+    if (!orderId && payloadObj.payment) {
+      const p = payloadObj.payment as Record<string, unknown>;
+      orderId = (p.orderId as string) || '';
+      paymentId = (p.id as string) || null;
+    }
+    if (!orderId && payloadObj.order) {
+      const o = payloadObj.order as Record<string, unknown>;
+      orderId = (o.id as string) || '';
+    }
+    if (!orderId && event.correlationId) {
+      orderId = event.correlationId;
+    }
+    if (!orderId) {
+      orderId = 'ord_ps_unknown';
+    }
+    const draft = canonicalEventToDraft(event);
+
+    const createdDeliveries = await this.coordinator.transaction({}, async (ctx) => {
+      const deliveriesList: WebhookDeliveryEntity[] = [];
       const now = new Date().toISOString();
 
       for (const ep of matchingEndpoints) {
+        let eventPayload: unknown;
+        if (ep.mode === 'native') {
+          eventPayload = serializeToNativeWebhookEvent(draft);
+        } else {
+          eventPayload = formatCompatWebhookEvent(draft);
+          if (!eventPayload) continue;
+        }
+
+        const canonicalJson = canonicalJsonStringify(eventPayload);
+        const rawBody = Buffer.from(canonicalJson, 'utf8');
+
         const deliveryId = generateId('del_ps');
+
+        if (this.bodyVault) {
+          this.bodyVault.storeBody(deliveryId, rawBody);
+        }
+
         const delivery: WebhookDeliveryEntity = {
           id: deliveryId,
           endpointId: ep.id,
@@ -408,18 +505,26 @@ export class WebhookService {
           attempts: [],
           maxAttempts: 3,
           secretVersion: ep.secretVersion,
-          bodySnapshotBytes: 0,
+          bodySnapshotBytes: rawBody.length,
           nextRetryAt: now,
           createdAt: now,
           updatedAt: now,
         };
 
         ctx.deliveries.insert(delivery);
-        createdDeliveries.push(delivery);
+        deliveriesList.push(delivery);
       }
 
-      return createdDeliveries;
+      return deliveriesList;
     });
+
+    if (this.onDeliveryEnqueued) {
+      for (const d of createdDeliveries) {
+        this.onDeliveryEnqueued(d.id);
+      }
+    }
+
+    return createdDeliveries;
   }
 
   /**

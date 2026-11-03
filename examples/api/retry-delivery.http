@@ -1,0 +1,32 @@
+### 1. List Webhook Deliveries
+# @name listDeliveries
+GET http://127.0.0.1:8787/api/v1/deliveries?limit=10
+Authorization: Bearer {{nativeToken}}
+
+###
+
+### 2. Inspect an Individual Delivery and its Attempt History
+# @name getDelivery
+GET http://127.0.0.1:8787/api/v1/deliveries/{{deliveryId}}
+Authorization: Bearer {{nativeToken}}
+
+###
+
+### 3. Manually Retry an Exhausted or Failed Webhook Delivery
+# @name retryDelivery
+POST http://127.0.0.1:8787/api/v1/deliveries/{{deliveryId}}/retry
+Authorization: Bearer {{nativeToken}}
+Content-Type: application/json
+
+{}
+
+###
+
+### 4. Force Retry a Webhook Delivery
+POST http://127.0.0.1:8787/api/v1/deliveries/{{deliveryId}}/retry
+Authorization: Bearer {{nativeToken}}
+Content-Type: application/json
+
+{
+  "forced": true
+}

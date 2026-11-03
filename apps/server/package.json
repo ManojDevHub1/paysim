@@ -1,6 +1,7 @@
 {
   "name": "@paysim/server",
   "version": "1.0.0",
+  "license": "MIT",
   "description": "PAYSIM local HTTP server and simulation engine host",
   "type": "module",
   "main": "./dist/index.js",

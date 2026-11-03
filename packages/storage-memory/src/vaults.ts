@@ -1,6 +1,8 @@
 import { randomBytes } from 'node:crypto';
 import { zeroizeBuffer } from '@paysim/crypto';
 import type { DeliveryStatus } from '@paysim/contracts';
+import { MEMORY_BOUNDS } from './state/root-state.js';
+import { StorageCapacityError } from './state/errors.js';
 
 /**
  * Ephemeral disclosure entry mapping an opaque reference to a raw secret Buffer.
@@ -22,6 +24,9 @@ export interface DeliveryRetentionReference {
   readonly secretVersion: number;
   readonly status: DeliveryStatus;
   readonly manualRetriesRemaining: number;
+  readonly attemptsCount?: number;
+  readonly maxAttempts?: number;
+  readonly nextRetryAt?: string | null;
 }
 
 /**
@@ -195,6 +200,7 @@ export class SecretVersionRetentionTracker {
     readonly manualRetriesRemaining: number;
     readonly attemptsCount?: number;
     readonly maxAttempts?: number;
+    readonly nextRetryAt?: string | null;
   }): boolean {
     // 1. Queued deliveries (awaiting initial attempt)
     if (delivery.status === 'pending') {
@@ -204,13 +210,22 @@ export class SecretVersionRetentionTracker {
     if (delivery.status === 'in_progress') {
       return true;
     }
-    // 3. Failed retry-eligible deliveries (eligible for automatic backoff retry)
+    // 3. Failed retry-eligible deliveries (eligible for automatic backoff retry or manual retry)
     // Only retains secret while automatic attempts remain or manual retries are authorized
     if (delivery.status === 'failed') {
+      // If an automatic retry is scheduled (nextRetryAt is set), it is strictly eligible
+      if (delivery.nextRetryAt) {
+        return true;
+      }
+      // If automatic attempts remain (< maxAttempts), it is strictly eligible
       if (delivery.attemptsCount !== undefined && delivery.maxAttempts !== undefined) {
-        if (delivery.attemptsCount >= delivery.maxAttempts && delivery.manualRetriesRemaining === 0) {
-          return false;
+        if (delivery.attemptsCount < delivery.maxAttempts) {
+          return true;
         }
+      }
+      // If automatic attempts are spent, only eligible if manual retry quota remains
+      if (delivery.manualRetriesRemaining === 0) {
+        return false;
       }
       return true;
     }
@@ -309,6 +324,117 @@ export class DeliveryReferenceTracker {
    */
   public clear(): void {
     this.releasedDeliveries.clear();
+  }
+}
+
+/**
+ * Isolated memory vault for exact serialized webhook request body bytes.
+ * Guarantees bit-for-bit exact byte preservation across all retries per ADR-006.
+ */
+export class DeliveryBodyVault {
+  // Key: deliveryId -> exact serialized Buffer
+  private readonly bodies = new Map<string, Buffer>();
+  private readonly maxCapacity: number;
+
+  constructor(maxCapacity: number = MEMORY_BOUNDS.MAX_DELIVERIES) {
+    this.maxCapacity = maxCapacity;
+  }
+
+  /**
+   * Stores the exact serialized body Buffer for a delivery.
+   * Throws StorageCapacityError if capacity is exceeded.
+   */
+  public storeBody(deliveryId: string, body: Buffer): void {
+    if (this.bodies.size >= this.maxCapacity && !this.bodies.has(deliveryId)) {
+      throw new StorageCapacityError('deliveryBodies', this.maxCapacity);
+    }
+    this.bodies.set(deliveryId, body);
+  }
+
+  /**
+   * Retrieves the serialized body Buffer for a delivery.
+   */
+  public getBody(deliveryId: string): Buffer | null {
+    return this.bodies.get(deliveryId) ?? null;
+  }
+
+  /**
+   * Checks whether a body buffer exists for a delivery.
+   */
+  public hasBody(deliveryId: string): boolean {
+    return this.bodies.has(deliveryId);
+  }
+
+  /**
+   * Deletes the body buffer for a delivery.
+   */
+  public deleteBody(deliveryId: string): boolean {
+    return this.bodies.delete(deliveryId);
+  }
+
+  /**
+   * Cleans up stored body buffers for permanently terminated deliveries.
+   * - 'succeeded': successfully delivered
+   * - 'rejected': permanently rejected (SSRF or redirect violation)
+   * - 'exhausted' with manualRetriesRemaining === 0: all manual retries consumed
+   */
+  public pruneTerminalBodies(
+    deliveries: Iterable<{
+      readonly id: string;
+      readonly status: DeliveryStatus;
+      readonly manualRetriesRemaining?: number;
+      readonly nextRetryAt?: string | null;
+      readonly attempts?: readonly unknown[];
+      readonly maxAttempts?: number;
+    }>
+  ): number {
+    let pruned = 0;
+    for (const d of deliveries) {
+      // If a delivery is in 'failed' status but has an automatic retry scheduled or auto attempts remaining,
+      // its body MUST be preserved for the upcoming automatic retry.
+      const hasScheduledRetry = Boolean(d.nextRetryAt);
+      const hasAutoRetriesRemaining =
+        d.attempts !== undefined && d.maxAttempts !== undefined && d.attempts.length < d.maxAttempts;
+
+      if (d.status === 'failed' && (hasScheduledRetry || hasAutoRetriesRemaining)) {
+        continue;
+      }
+
+      const isTerminal =
+        d.status === 'succeeded' ||
+        d.status === 'rejected' ||
+        d.status === 'interrupted' ||
+        ((d.status === 'exhausted' || d.status === 'failed') &&
+          (d.manualRetriesRemaining === undefined || d.manualRetriesRemaining === 0));
+
+      if (isTerminal) {
+        if (this.bodies.delete(d.id)) {
+          pruned++;
+        }
+      }
+    }
+    return pruned;
+  }
+
+  /**
+   * Returns the count of stored delivery bodies.
+   */
+  public get size(): number {
+    return this.bodies.size;
+  }
+
+  /**
+   * Returns maximum capacity of the vault.
+   */
+  public get capacity(): number {
+    return this.maxCapacity;
+  }
+
+  /**
+   * Clears all stored bodies.
+   */
+  public clear(): void {
+    this.bodies.clear();
   }
 }
 

@@ -1,6 +1,7 @@
 {
   "name": "@paysim/shared",
   "version": "1.0.0",
+  "license": "MIT",
   "description": "Cross-package utilities without business-specific dependencies",
   "type": "module",
   "main": "./dist/index.js",

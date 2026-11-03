@@ -7,7 +7,6 @@
     { "path": "./packages/domain" },
     { "path": "./packages/storage-memory" },
     { "path": "./apps/server" },
-    { "path": "./apps/web" },
-    { "path": "./tests" }
+    { "path": "./apps/web" }
   ]
 }

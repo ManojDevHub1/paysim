@@ -1,4 +1,5 @@
 import express, { type Express } from 'express';
+import { config } from './config.js';
 import {
   createApplicationContext,
   type ApplicationContext,
@@ -34,7 +35,10 @@ export function createApp(appContextOrOptions?: ApplicationContext | CreateAppOp
   const context: ApplicationContext =
     appContextOrOptions && 'orders' in appContextOrOptions
       ? appContextOrOptions
-      : (appContextOrOptions as CreateAppOptions)?.appContext ?? createApplicationContext();
+      : (appContextOrOptions as CreateAppOptions)?.appContext ??
+        createApplicationContext({
+          runtimeConfig: { backendPort: config.PORT, frontendPort: 5173 },
+        });
 
   const app = express();
 

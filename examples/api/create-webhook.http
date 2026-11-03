@@ -1,0 +1,54 @@
+### 1. Register a Native Webhook Endpoint
+# @name createEndpoint
+POST http://127.0.0.1:8787/api/v1/webhook-endpoints
+Authorization: Bearer {{nativeToken}}
+Content-Type: application/json
+
+{
+  "url": "http://127.0.0.1:9001/webhook",
+  "mode": "native",
+  "events": [
+    "payment.captured",
+    "payment.failed",
+    "order.paid"
+  ],
+  "secret": "sample_secret_key_1234567890abcdef",
+  "description": "Local Development Webhook Receiver"
+}
+
+###
+
+### 2. Register a Razorpay Compatibility Mode Webhook Endpoint
+# @name createCompatEndpoint
+POST http://127.0.0.1:8787/api/v1/webhook-endpoints
+Authorization: Bearer {{nativeToken}}
+Content-Type: application/json
+
+{
+  "url": "http://127.0.0.1:9001/compat/webhook",
+  "mode": "compatibility",
+  "events": [
+    "payment.captured",
+    "payment.failed",
+    "order.paid"
+  ],
+  "secret": "sample_secret_key_1234567890abcdef",
+  "description": "Razorpay Compatible Receiver"
+}
+
+###
+
+### 3. List All Webhook Endpoints
+GET http://127.0.0.1:8787/api/v1/webhook-endpoints
+Authorization: Bearer {{nativeToken}}
+
+###
+
+### 4. Rotate Webhook Endpoint Secret (Produces Version 2)
+POST http://127.0.0.1:8787/api/v1/webhook-endpoints/{{endpointId}}/rotate-secret
+Authorization: Bearer {{nativeToken}}
+Content-Type: application/json
+
+{
+  "newSecret": "rotated_secret_key_1234567890abcdef"
+}

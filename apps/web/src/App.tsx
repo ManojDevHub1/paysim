@@ -1,51 +1,81 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { ToastProvider } from './context/ToastContext.js';
+import { AuthProvider } from './context/AuthContext.js';
+import { AppLayout } from './components/layout/AppLayout.js';
+import type { ViewType } from './components/layout/Sidebar.js';
+
+import { OverviewView } from './views/OverviewView.js';
+import { OrdersView } from './views/OrdersView.js';
+import { PaymentsView } from './views/PaymentsView.js';
+import { CheckoutSimulatorView } from './views/CheckoutSimulatorView.js';
+import { WebhooksView } from './views/WebhooksView.js';
+import { EventsView } from './views/EventsView.js';
+import { DeliveriesView } from './views/DeliveriesView.js';
+import { CredentialsView } from './views/CredentialsView.js';
+import { SettingsView } from './views/SettingsView.js';
+
+const DashboardContent: React.FC = () => {
+  const [activeView, setActiveView] = useState<ViewType>('overview');
+  const [fragmentCapabilityToken, setFragmentCapabilityToken] = useState<string | null>(null);
+
+  // Task 3: Inspect URL fragment on initial load and on hashchange, scrub immediately via history.replaceState
+  React.useEffect(() => {
+    const handleFragment = () => {
+      if (typeof window !== 'undefined' && window.location.hash && window.location.hash.length > 1) {
+        const raw = window.location.hash.substring(1).trim();
+        // Remove fragment immediately from address bar without adding to history
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        // Retain strictly in memory for the exchange operation
+        if (raw.length >= 32) {
+          setFragmentCapabilityToken(raw);
+          setActiveView('checkout');
+        }
+      }
+    };
+
+    handleFragment();
+    window.addEventListener('hashchange', handleFragment);
+    return () => window.removeEventListener('hashchange', handleFragment);
+  }, []);
+
+  const renderView = () => {
+    switch (activeView) {
+      case 'overview':
+        return <OverviewView onNavigate={setActiveView} />;
+      case 'orders':
+        return <OrdersView onNavigateToPayments={() => setActiveView('payments')} />;
+      case 'payments':
+        return <PaymentsView />;
+      case 'checkout':
+        return <CheckoutSimulatorView initialFragmentToken={fragmentCapabilityToken} />;
+      case 'webhooks':
+        return <WebhooksView />;
+      case 'events':
+        return <EventsView />;
+      case 'deliveries':
+        return <DeliveriesView />;
+      case 'credentials':
+        return <CredentialsView />;
+      case 'settings':
+        return <SettingsView />;
+      default:
+        return <OverviewView onNavigate={setActiveView} />;
+    }
+  };
+
+  return (
+    <AppLayout activeView={activeView} onNavigate={setActiveView}>
+      {renderView()}
+    </AppLayout>
+  );
+};
 
 export const App: React.FC = () => {
   return (
-    <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
-      <header style={{ borderBottom: '1px solid #1e293b', paddingBottom: '1.5rem', marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#38bdf8' }}>PAYSIM</h1>
-            <p style={{ color: '#94a3b8', fontSize: '0.875rem' }}>
-              Local-First Payment Simulation &amp; Webhook Laboratory
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            <span
-              style={{
-                display: 'inline-block',
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                backgroundColor: '#22c55e',
-              }}
-            />
-            <span style={{ fontSize: '0.8125rem', color: '#22c55e', fontWeight: 500 }}>
-              Loopback 127.0.0.1 (Offline)
-            </span>
-          </div>
-        </div>
-      </header>
-
-      <main>
-        <section
-          style={{
-            backgroundColor: '#1e293b',
-            borderRadius: '8px',
-            padding: '2rem',
-            border: '1px solid #334155',
-          }}
-        >
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '0.75rem' }}>
-            Monorepo Scaffolding Initialized
-          </h2>
-          <p style={{ color: '#cbd5e1', fontSize: '0.9375rem', lineHeight: 1.6 }}>
-            Phase 03.1 foundation engineering complete. Backend listening on loopback (8787).
-            Dashboard views and simulation controls will be introduced in subsequent phases.
-          </p>
-        </section>
-      </main>
-    </div>
+    <ToastProvider>
+      <AuthProvider>
+        <DashboardContent />
+      </AuthProvider>
+    </ToastProvider>
   );
 };

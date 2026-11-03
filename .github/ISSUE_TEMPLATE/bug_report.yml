@@ -1,0 +1,63 @@
+name: Bug Report
+description: Create a report to help us improve PAYSIM
+title: "[BUG]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report an issue with PAYSIM!
+        Please ensure you are running on supported Node.js (>= 24.0.0).
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Provide a clear and concise description of the bug.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Exact steps to reproduce the behavior.
+      placeholder: |
+        1. Start PAYSIM with `npm run dev`
+        2. Create an order via API or Dashboard
+        3. Trigger payment simulation with outcome...
+        4. See error in terminal or dashboard
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: doctor-output
+    attributes:
+      label: Environment Diagnostics (npm run doctor)
+      description: Paste the output of `npm run doctor` from your terminal.
+      render: text
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating System
+      placeholder: Windows 11 / macOS Sonoma / Ubuntu 24.04
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Terminal Logs / Error Stack Traces
+      description: Paste relevant terminal logs or browser console errors here.
+      render: text

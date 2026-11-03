@@ -1,5 +1,6 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
+import globals from 'globals';
 
 export default tseslint.config(
   js.configs.recommended,
@@ -11,6 +12,15 @@ export default tseslint.config(
       '**/coverage/**',
       '**/*.d.ts',
     ],
+  },
+  {
+    files: ['scripts/**/*.mjs', 'scripts/**/*.js', 'examples/**/*.mjs', 'examples/**/*.js'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        WebSocket: 'readonly',
+      },
+    },
   },
   {
     rules: {

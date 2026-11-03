@@ -20,6 +20,18 @@ export default defineConfig({
         target: 'http://127.0.0.1:8787',
         changeOrigin: true,
       },
+      '/control': {
+        target: 'http://127.0.0.1:8787',
+        changeOrigin: true,
+      },
+      '/checkout': {
+        target: 'http://127.0.0.1:8787',
+        changeOrigin: true,
+      },
+      '/compat': {
+        target: 'http://127.0.0.1:8787',
+        changeOrigin: true,
+      },
     },
   },
   resolve: {

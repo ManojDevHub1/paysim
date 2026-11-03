@@ -1,0 +1,28 @@
+### 1. List Canonical Domain Events
+# @name listEvents
+GET http://127.0.0.1:8787/api/v1/events?limit=10
+Authorization: Bearer {{nativeToken}}
+
+###
+
+### 2. Replay a Canonical Event to All Active Webhook Endpoints
+# @name replayEventAll
+POST http://127.0.0.1:8787/api/v1/events/{{eventId}}/replay
+Authorization: Bearer {{nativeToken}}
+Content-Type: application/json
+
+{}
+
+###
+
+### 3. Replay a Canonical Event to Specific Endpoints Only
+# @name replayEventTargeted
+POST http://127.0.0.1:8787/api/v1/events/{{eventId}}/replay
+Authorization: Bearer {{nativeToken}}
+Content-Type: application/json
+
+{
+  "endpointIds": [
+    "{{endpointId}}"
+  ]
+}

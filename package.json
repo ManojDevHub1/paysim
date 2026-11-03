@@ -2,6 +2,7 @@
   "name": "paysim-monorepo",
   "version": "1.0.0",
   "private": true,
+  "license": "MIT",
   "description": "PAYSIM — Local-First Payment Workflow Simulator & Webhook Testing Laboratory",
   "type": "module",
   "engines": {
@@ -13,9 +14,14 @@
     "packages/*"
   ],
   "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "start": "node scripts/start.mjs",
+    "doctor": "node scripts/doctor.mjs",
+    "verify-fresh-checkout": "node scripts/verify-fresh-checkout.mjs",
     "build": "tsc --build && npm run build --workspace=apps/web",
     "build:force": "tsc --build --force && npm run build --workspace=apps/web",
     "clean": "tsc --build --clean && npm run clean --workspaces --if-present",
+    "generate:icons": "node scripts/generate-brand-assets.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --build",
     "test": "vitest run",

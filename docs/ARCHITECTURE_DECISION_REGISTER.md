@@ -29,6 +29,7 @@ This Architecture Decision Register (ADR) records key architectural and design d
 | **ADR-008** | Internal Credential Ownership Binding for Multi-Tenant Compatibility Isolation | Approved | 2026-11-03 | Compatibility Adapter |
 | **ADR-009** | Strict Origin-Bound Handshake with Cryptographic Nonce for Checkout Iframe | Approved | 2026-11-03 | Checkout Shim |
 | **ADR-010** | Token-Free Idempotency Snapshots & Capability Tombstone Retention | Approved | 2026-11-03 | Idempotency |
+| **ADR-011** | Webhook Retry Policy Authority, Manual Retry Precedence & Queue Overflow Intent Preservation | Approved | 2026-11-03 | Webhook Engine & Reliability |
 
 ---
 
@@ -284,6 +285,37 @@ Idempotency records cache response snapshots for duplicate requests. For payment
 - **Positive:** Eliminates replay attacks and token leakage via cached idempotency payloads.
 - **Positive:** Consistent and deterministic error states for repeated client requests.
 - **Negative:** Requires state lookups against the session and token vault during idempotency resolution.
+
+---
+
+## ADR-011: Webhook Retry Policy Authority, Manual Retry Precedence & Queue Overflow Intent Preservation
+
+### Status: Approved
+**Deciders:** Principal Backend Reliability Engineer, Webhook Engine Team
+**Consulted:** PRD v2.3.0 Sections 5.8, 7.4 (DEL-09, DEL-13, RPL-02); PRD v2.2.0 Sections 11.8, 11.9, 30.2; ADR-006, ADR-007
+
+### Context
+PRD v2.3.0 (§5.8) establishes that webhook deliveries are bounded to 3 automatic attempts and up to 3 manual retries. However, PRD v2.3.0 does not explicitly specify whether manual retry is permitted or prohibited while an automatic backoff timer is running (status `failed` with future `nextRetryAt`). Furthermore, in a high-throughput or saturated queue scenario (max 100 jobs), if a user requests a manual retry when the queue is full, the manual retry must remain safely committed in `RootState` as `pending` with its manual intent intact, so that when a queue slot is freed, background reconciliation enqueues it as a manual retry rather than reverting to an automatic attempt.
+
+### Decision
+1. **Normative Authority:** PRD v2.3.0 is recognized as the sole authoritative specification baseline for PAYSIM. The older PRD v2.2.0 is retained as an immutable historical archive.
+2. **Policy Decision for Manual Retry During Backoff:** Manual retry during scheduled automatic backoff is an implementation-level policy decision not settled by PRD v2.3.0. PAYSIM ratifies that manual retry **is permitted** during backoff:
+   - When accepted, manual retry **supersedes** the scheduled automatic backoff timer.
+   - The scheduled timer is atomically cancelled via `cancelScheduledRetry(deliveryId)` without consuming an automatic attempt.
+   - The manual attempt executes immediately, is classified with internal metadata `initiator: 'manual'`, and decrements the manual retry allowance by exactly 1.
+   - In accordance with PRD §5.8 and §11.9, a manual attempt **never triggers a subsequent automatic retry backoff cycle**.
+3. **Queue Overflow Intent Preservation:**
+   - When the 100-job queue is saturated, `retryDelivery` updates the delivery in `RootState` with `status: 'pending'`, `nextRetryAt: now`, and internal metadata `pendingInitiator: 'manual'`.
+   - The manual intent is thus durably stored in the authoritative `RootState` delivery entity, surviving in-memory queue rejection.
+   - When queue slots are freed, `reconcilePendingDeliveries()` inspects `pendingInitiator` and enqueues the job with `initiator: 'manual'`.
+   - Upon execution, the worker assigns `initiator: 'manual'` to the completed attempt and clears `pendingInitiator`.
+   - Manual allowance is only decremented upon successful execution and recording of the attempt, never upon queue placement.
+4. **Contract Freeze Invariant:** All initiator tracking is conducted via internal properties and does not modify the frozen `@paysim/contracts` package schemas.
+
+### Consequences
+- **Positive:** Zero dropped manual retries under queue overflow; exact classification of manual vs automatic attempts; zero re-triggering of automatic loops on failed manual attempts.
+- **Positive:** Bit-for-bit payload byte preservation (ADR-006) and secret version retention across all 6 bounded attempts.
+- **Negative:** Requires storing `pendingInitiator` on the delivery entity in `RootState` until worker dispatch.
 
 ---
 

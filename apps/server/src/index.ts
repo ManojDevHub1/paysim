@@ -2,9 +2,17 @@ import { createApp } from './app.js';
 import { config } from './config.js';
 import { createApplicationContext } from './application/index.js';
 
-const appContext = createApplicationContext();
+const appContext = createApplicationContext({
+  runtimeConfig: {
+    backendPort: config.PORT,
+    frontendPort: 5173,
+  },
+});
 const bootstrapToken = appContext.control.getBootstrapToken();
 const app = createApp(appContext);
+
+// Start outbound webhook delivery engine & worker pool
+appContext.engine.start();
 
 const server = app.listen(config.PORT, config.HOST, () => {
   console.log(`[PAYSIM] Server listening strictly on http://${config.HOST}:${config.PORT}`);
@@ -22,14 +30,21 @@ server.on('error', (err: NodeJS.ErrnoException) => {
   process.exit(1);
 });
 
-process.on('SIGINT', () => {
+const gracefulShutdown = async () => {
+  try {
+    await appContext.engine.stop();
+  } catch (err) {
+    console.error('[PAYSIM] Error stopping webhook engine:', err);
+  }
   server.close(() => {
     process.exit(0);
   });
+};
+
+process.on('SIGINT', () => {
+  void gracefulShutdown();
 });
 
 process.on('SIGTERM', () => {
-  server.close(() => {
-    process.exit(0);
-  });
+  void gracefulShutdown();
 });

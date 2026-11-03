@@ -1,0 +1,59 @@
+### 1. Initiate a Payment Attempt for an Order
+# @name createPaymentAttempt
+POST http://127.0.0.1:8787/api/v1/orders/{{orderId}}/payment-attempts
+Authorization: Bearer {{nativeToken}}
+Content-Type: application/json
+
+{
+  "method": "mock_card",
+  "parentOrigin": "http://127.0.0.1:5173"
+}
+
+###
+
+### 2. Simulate Payment Success (Captures Payment & Marks Order as Paid)
+# @name simulateSuccess
+POST http://127.0.0.1:8787/api/v1/payments/{{paymentId}}/simulate
+Authorization: Bearer {{nativeToken}}
+Content-Type: application/json
+
+{
+  "outcome": "success"
+}
+
+###
+
+### 3. Simulate Payment Failure
+# @name simulateFailure
+POST http://127.0.0.1:8787/api/v1/payments/{{paymentId}}/simulate
+Authorization: Bearer {{nativeToken}}
+Content-Type: application/json
+
+{
+  "outcome": "failed",
+  "failureReason": "INSUFFICIENT_FUNDS"
+}
+
+###
+
+### 4. Simulate Payment Pending (Asynchronous State)
+# @name simulatePending
+POST http://127.0.0.1:8787/api/v1/payments/{{paymentId}}/simulate
+Authorization: Bearer {{nativeToken}}
+Content-Type: application/json
+
+{
+  "outcome": "pending"
+}
+
+###
+
+### 5. Resolve a Pending Payment to Success
+# @name resolvePending
+POST http://127.0.0.1:8787/api/v1/payments/{{paymentId}}/resolve
+Authorization: Bearer {{nativeToken}}
+Content-Type: application/json
+
+{
+  "resolution": "success"
+}

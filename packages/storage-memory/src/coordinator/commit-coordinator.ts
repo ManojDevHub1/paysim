@@ -83,6 +83,8 @@ export class CommitCoordinator {
   public readonly deliveries: WebhookDeliveryRepository;
   public readonly idempotency: IdempotencyRepository;
 
+  private readonly commitListeners = new Set<(events: readonly CanonicalEvent[]) => void>();
+
   constructor(stateHolder: RootStateHolder, lockManager?: LockManager) {
     this.stateHolder = stateHolder;
     this.lockManager = lockManager ?? new LockManager();
@@ -102,6 +104,31 @@ export class CommitCoordinator {
 
   public getLockManager(): LockManager {
     return this.lockManager;
+  }
+
+  /**
+   * Subscribes to events committed atomically in transactions.
+   * Invoked synchronously immediately following atomic state pointer swap.
+   * Listener exceptions are caught and suppressed to prevent rolling back committed state.
+   */
+  public onCommit(listener: (events: readonly CanonicalEvent[]) => void): () => void {
+    this.commitListeners.add(listener);
+    return () => {
+      this.commitListeners.delete(listener);
+    };
+  }
+
+  private notifyCommitListeners(events: readonly CanonicalEvent[]): void {
+    if (events.length === 0 || this.commitListeners.size === 0) {
+      return;
+    }
+    for (const listener of this.commitListeners) {
+      try {
+        listener(events);
+      } catch (err) {
+        console.error('[CommitCoordinator] Error in onCommit listener:', err);
+      }
+    }
   }
 
   /**
@@ -211,6 +238,7 @@ export class CommitCoordinator {
         // Step 4: Synchronous Atomic Commit Section (Node.js single-threaded; no awaits allowed)
         const latest = this.stateHolder.getState();
         let candidateRootState: RootState;
+        const committedEvents: CanonicalEvent[] = [];
 
         if (latest.version === current.version) {
           // Fast path: no concurrent transaction committed during work()
@@ -236,7 +264,9 @@ export class CommitCoordinator {
               throw new DuplicateEntityError('CanonicalEvent', canonicalEvent.id);
             }
 
-            candidateEvents.set(canonicalEvent.id, Object.freeze(canonicalEvent));
+            const frozenEvent = Object.freeze(canonicalEvent);
+            candidateEvents.set(canonicalEvent.id, frozenEvent);
+            committedEvents.push(frozenEvent);
           }
 
           // Capacity & invariant validation
@@ -292,8 +322,12 @@ export class CommitCoordinator {
             }
           }
           for (const [id] of endpointRepo.getMutations()) {
+            const currentEndpoint = current.endpoints.get(id);
             const latestEndpoint = latest.endpoints.get(id);
-            if (latestEndpoint) {
+            if (!currentEndpoint && latestEndpoint) {
+              throw new ConcurrencyConflictError('WebhookEndpoint', id, 1, 0);
+            }
+            if (currentEndpoint && latestEndpoint && currentEndpoint !== latestEndpoint) {
               throw new ConcurrencyConflictError('WebhookEndpoint', id, 1, 0);
             }
           }
@@ -303,8 +337,12 @@ export class CommitCoordinator {
             }
           }
           for (const [id] of deliveryRepo.getMutations()) {
+            const currentDelivery = current.deliveries.get(id);
             const latestDelivery = latest.deliveries.get(id);
-            if (latestDelivery) {
+            if (!currentDelivery && latestDelivery) {
+              throw new ConcurrencyConflictError('WebhookDelivery', id, 1, 0);
+            }
+            if (currentDelivery && latestDelivery && currentDelivery !== latestDelivery) {
               throw new ConcurrencyConflictError('WebhookDelivery', id, 1, 0);
             }
           }
@@ -533,7 +571,9 @@ export class CommitCoordinator {
             if (rebasedEvents.has(canonicalEvent.id)) {
               throw new DuplicateEntityError('CanonicalEvent', canonicalEvent.id);
             }
-            rebasedEvents.set(canonicalEvent.id, Object.freeze(canonicalEvent));
+            const frozenEvent = Object.freeze(canonicalEvent);
+            rebasedEvents.set(canonicalEvent.id, frozenEvent);
+            committedEvents.push(frozenEvent);
           }
 
           // Validate capacity & invariants on rebased state
@@ -571,6 +611,9 @@ export class CommitCoordinator {
 
         // Step 5: Atomic pointer swap (cannot throw)
         this.stateHolder.commit(candidateRootState);
+
+        // Step 5b: Notify on-commit listeners (synchronous, catch-all)
+        this.notifyCommitListeners(committedEvents);
 
         return result;
       } finally {

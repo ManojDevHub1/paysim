@@ -1,73 +1,302 @@
-# PAYSIM — Payment Simulator & Webhook Testing Laboratory
+<div align="center">
 
-PAYSIM is a local-first payment workflow simulator and webhook testing tool for developers. It allows developers to simulate payment flows, test local webhooks, and debug integration logic without merchant onboarding, paid APIs, or real financial transactions.
+# PAYSIM
 
-## Current Implementation Status (Phase 03)
+**Local Payment Gateway Simulator & Webhook Testing Laboratory**
 
-- **[`docs/PHASE_03_4_IMPLEMENTATION_REPORT.md`](docs/PHASE_03_4_IMPLEMENTATION_REPORT.md)** — Phase 03.4 Express Transport Ingress & HTTP API Integration Report (Complete HTTP transport ingress connecting the Application Service Layer to Express 4 routes. Full implementation of all 30 concrete normative routes in `API_ROUTE_MANIFEST` plus 1 non-normative dashboard alias, modular middleware pipeline: Request ID, loopback CORS, JSON limit, Bearer/Basic/Control/Capability auth, CSRF, and centralized error handling, strict 3-tier fallback precedence: 501 / 405 with RFC 9110 `Allow` / 404, and decoupled server lifecycle. 395 passing tests across 31 test suites).
-- **[`docs/PHASE_03_4_VALIDATION_REPORT.md`](docs/PHASE_03_4_VALIDATION_REPORT.md)** — Phase 03.4 Validation Report (Comprehensive Supertest HTTP integration test suite: 40 tests across 7 integration suites certifying routing fallback precedence, native order/payment/simulation lifecycle, Razorpay compatibility orders and checkout, capability token exchange and rotation, control session exchange/logout/CSRF/safe overview, webhook loopback confinement and event replay, and real loopback socket lifecycle).
-- **[`docs/PHASE_03_3_3_IMPLEMENTATION_REPORT.md`](docs/PHASE_03_3_3_IMPLEMENTATION_REPORT.md)** — Phase 03.3.3 Application Service Layer & Use Case Orchestration Report (Working application use case system connecting frozen contracts, pure domain state machines, RootState commit coordinator, in-memory repositories, cryptographic vaults, and webhook adapters. Implemented `OrderService`, `PaymentService`, `CheckoutService`, `ControlService`, `WebhookService`, and unified `ApplicationContext`. 355 passing unit tests across monorepo).
-- **[`docs/PHASE_03_3_3_VALIDATION_REPORT.md`](docs/PHASE_03_3_3_VALIDATION_REPORT.md)** — Phase 03.3.3 Validation Report (C333-01 to C333-20 all PASS certifying order operations, payment attempts & simulations, capability token isolation, credential rotation, webhook loopback security, secret vault encapsulation, delivery retry scheduling, and monorepo pipeline verification with 355 tests).
-- **[`docs/PHASE_03_3_2_2_FINAL_VERIFICATION.md`](docs/PHASE_03_3_2_2_FINAL_VERIFICATION.md)** — Phase 03.3.2.2 & 03.3.2.3 Final Transaction Isolation, Failure Injection & Boundary Verification Report (Deterministic 8-stage failure injection matrix, read-write anti-dependency protection across 7 aggregates, deep immutability through `ReadonlyStateMap` and post-commit `close()` protection, exact cryptographic ownership boundaries `WebhookSecretVault` vs `RootState`, synchronous atomic pointer swap, complete 8-collection repository coverage matrix, Git baseline audit, and 303 passing unit tests across monorepo).
-- **[`docs/PHASE_03_3_2_2_VALIDATION_REPORT.md`](docs/PHASE_03_3_2_2_VALIDATION_REPORT.md)** — Phase 03.3.2.2 & 03.3.2.3 Validation Report (C3323-01 to C3323-20 all PASS certifying 8 failure injection stages, read-write conflict detection across all aggregates, pessimistic order locking, deep immutability, secret vault isolation, repository completeness, Git `.gitignore` verification, and monorepo quality pipeline verification with 303 tests).
-- **[`docs/PHASE_03_3_2_1_FINAL_INTEGRITY_AUDIT.md`](docs/PHASE_03_3_2_1_FINAL_INTEGRITY_AUDIT.md)** — Phase 03.3.2.1 RootState Transaction Integrity & Concurrency Audit Report (Deep audit of in-memory transaction coordinator, synchronous optimistic rebase and conflict detection preventing lost updates across concurrent disjoint aggregates, `ReadonlyStateMap` encapsulation preventing in-place Map mutation `set`/`delete`/`clear`, single source of truth for idempotency and retention, failure injection across 9 transaction stages, and 278 passing unit tests across monorepo).
-- **[`docs/PHASE_03_3_2_1_VALIDATION_REPORT.md`](docs/PHASE_03_3_2_1_VALIDATION_REPORT.md)** — Phase 03.3.2.1 Validation Report (C3321-01 to C3321-16 all PASS certifying concurrent disjoint isolation, same-aggregate serialization, map encapsulation, store integration, failure recovery, Git environment verification, and monorepo quality pipeline verification).
-- **[`docs/PHASE_03_3_2_IMPLEMENTATION_REPORT.md`](docs/PHASE_03_3_2_IMPLEMENTATION_REPORT.md)** — Phase 03.3.2 RootState Coordinator & In-Memory Repositories Report (Canonical immutable `RootState`, `CommitCoordinator` single atomic pointer swap `currentRootState = candidateRootState`, 5-tier hierarchical lock manager with same-tier lexicographical sorting ADR-005, BigInt monotonic global event sequencing with decimal string serialization ADR-007, dual-mode repositories, cross-aggregate invariant validation, and 264 passing unit tests across monorepo).
-- **[`docs/PHASE_03_3_2_VALIDATION_REPORT.md`](docs/PHASE_03_3_2_VALIDATION_REPORT.md)** — Phase 03.3.2 Validation Report (C332-01 to C332-17 all PASS certifying single RootState authority, copy-on-write candidate maps, multi-aggregate atomicity, gap-free sequence rollback, deadlock-free lock ordering, and monorepo quality pipeline verification).
-- **[`docs/PHASE_03_3_1_3_FINAL_VERIFICATION.md`](docs/PHASE_03_3_1_3_FINAL_VERIFICATION.md)** — Phase 03.3.1.3 Final Domain Boundary Verification Report (Strict public simulation outcome boundary `['success', 'pending', 'failed', 'cancelled']`, compile-time and runtime rejection of non-normative outcomes, dynamic payment version monotonicity across both authorization paths $v_1 \to v_2 \to v_3$ and $v_1 \to v_2 \to v_3 \to v_4$, complete decoupling of domain package from transport wire serializers `apps/server/src/adapters/`, explicit format verification for `payment.cancelled`, and 223 passing unit tests across monorepo).
-- **[`docs/PHASE_03_3_1_3_VALIDATION_REPORT.md`](docs/PHASE_03_3_1_3_VALIDATION_REPORT.md)** — Phase 03.3.1.3 Validation Report (C313-01 to C313-16 all PASS certifying simulation boundaries, version monotonicity, transport decoupling, fixture byte preservation, and monorepo quality pipeline verification).
-- **[`docs/PHASE_03_3_1_2_FINAL_PATCH.md`](docs/PHASE_03_3_1_2_FINAL_PATCH.md)** — Phase 03.3.1.2 Domain Final Integrity Patch Report (Normative authorized cancellation primitive `cancelAuthorizedPayment`, `authorized -> cancelled`, public simulation outcome alignment `['success', 'pending', 'failed', 'cancelled']`, transport-independent error mapping to 30 ErrorCatalogue codes, wire adapter isolation, formal separation of 9 primitive transitions from compound simulation workflows, 36 table-driven transition matrix tests, cancellation semantics purity, and 210 passing unit tests across monorepo).
-- **[`docs/PHASE_03_3_1_2_VALIDATION_REPORT.md`](docs/PHASE_03_3_1_2_VALIDATION_REPORT.md)** — Phase 03.3.1.2 Validation Report (C312-01 to C312-17 all PASS certifying authorized cancellation, contract alignment, error mapping purity, event architecture boundaries, table-driven matrix execution, and monorepo quality pipeline verification).
-- **[`docs/PHASE_03_3_1_1_DOMAIN_AUDIT.md`](docs/PHASE_03_3_1_1_DOMAIN_AUDIT.md)** — Phase 03.3.1.1 Domain Engine Integrity Audit Report (Audit of two-step authorization simulation contract discrepancy, pure preparation semantics `prepareAutoCaptureTransition`, canonical event transport neutrality `canonicalPayload`, wire adapters `serializeToNativeWebhookEvent` / `serializeToCompatWebhookEvent`, order aggregate update rules `addPaymentAttemptToOrder`, exhaustive $6 \times 6 = 36$ payment state transition matrix, terminal immutability, and 168 passing unit tests across monorepo).
-- **[`docs/PHASE_03_3_1_1_VALIDATION_REPORT.md`](docs/PHASE_03_3_1_1_VALIDATION_REPORT.md)** — Phase 03.3.1.1 Validation Report (C311-01 to C311-18 all PASS certifying authorization simulation handling, snapshot preparation invariants, wire serialization adapters, fixture byte preservation, transition matrix execution, and monorepo quality pipeline verification).
-- **[`docs/PHASE_03_3_1_DOMAIN_ENGINE_REPORT.md`](docs/PHASE_03_3_1_DOMAIN_ENGINE_REPORT.md)** — Phase 03.3.1 Order & Payment Domain Engine Report (Pure deterministic Order and Payment domain logic, state machines, typed domain error hierarchy, compound atomic Auto-Capture sequence with causal event drafting `payment.authorized` -> `payment.captured` -> `order.paid`, point-in-time snapshot preservation, simulation outcomes, pending resolution, and 145 passing unit tests across monorepo).
-- **[`docs/PHASE_03_2_7_FINAL_FREEZE_REPORT.md`](docs/PHASE_03_2_7_FINAL_FREEZE_REPORT.md)** — Phase 03.2.7 Final Contract Freeze Corrections Report (Transport-level HTTP 405 MethodNotAllowedResponse and Headers schemas with RFC 9110 `Allow` header enforcement, strictly separated from 30 domain errors; 60-second secret disclosure TTL and accidental re-generation immunity; secret retention eligibility and idempotent `DeliveryReferenceTracker`; deterministic 4-stage fallback precedence pipeline with exact boundary tests; authoritative route specification counts (30 normative + 1 non-normative alias) with runtime Express handlers classified as **NOT VERIFIED** pending Phase 03.4).
-- **[`docs/PHASE_03_2_7_VALIDATION_REPORT.md`](docs/PHASE_03_2_7_VALIDATION_REPORT.md)** — Phase 03.2.7 Validation Report (C27-01 to C27-16 all PASS, 97 tests passing across monorepo).
-- **[`docs/PHASE_03_2_6_FINAL_AUDIT.md`](docs/PHASE_03_2_6_FINAL_AUDIT.md)** — Phase 03.2.6 Final Contract Freeze Audit Report (HTTP 405 error reconciliation, 5-tuple idempotency scoping `scope:principal:method:path:key`, canonical fingerprinting with path params, secret recovery isolation, 30 normative concrete routes in `API_ROUTE_MANIFEST`, non-normative credentials overview alias separation, secret retention across all 7 delivery states, and exact segment boundary fallback routing).
-- **[`docs/PHASE_03_2_6_VALIDATION_REPORT.md`](docs/PHASE_03_2_6_VALIDATION_REPORT.md)** — Phase 03.2.6 Validation Report (C26-01 to C26-16 all PASS, 93 tests passing across monorepo).
-- **[`docs/PHASE_03_2_5_FINAL_FREEZE_REPORT.md`](docs/PHASE_03_2_5_FINAL_FREEZE_REPORT.md)** — Phase 03.2.5 Final Contract Freeze & Security Corrections Report (Formal package freeze of `@paysim/contracts`, programmatic verification of 31 routes across categories, `WebhookSecretVault` with memory zeroization and ephemeral disclosure references, `IdempotencyStore` raw secret exclusion and recovery, dynamic secret version retention lifecycle, route status error mappings, and 90 passing tests).
-- **[`docs/PHASE_03_2_5_VALIDATION_REPORT.md`](docs/PHASE_03_2_5_VALIDATION_REPORT.md)** — Phase 03.2.5 Validation Report (C25-01 to C25-16 all PASS, 90 tests passing across monorepo).
-- **[`docs/PHASE_03_2_4_FINAL_PATCH.md`](docs/PHASE_03_2_4_FINAL_PATCH.md)** — Phase 03.2.4 Final API & Contract Integrity Patch (Pure declarative schema architecture, decoupled `COMPAT_UNSUPPORTED_FALLBACK_POLICY`, 31 concrete routes in `API_ROUTE_MANIFEST`, `GET /api/v1/webhook-endpoints/:id` verification, credentials overview alias reconciliation, webhook secret rotation idempotency recovery specification, and 11-vector URL security validation).
-- **[`docs/PHASE_03_2_4_VALIDATION_REPORT.md`](docs/PHASE_03_2_4_VALIDATION_REPORT.md)** — Phase 03.2.4 Validation Report (C24-01 to C24-15 all PASS, 77 tests passing across monorepo).
-- **[`docs/PHASE_03_2_3_FINAL_INTEGRITY_REPORT.md`](docs/PHASE_03_2_3_FINAL_INTEGRITY_REPORT.md)** — Phase 03.2.3 Final Contract Integrity Patch Report (Dynamic listener port protection, independent destination pre-validation, webhook secret rotation route `POST .../rotate-secret`, machine-readable `API_ROUTE_MANIFEST` with 30 routes, and automated coverage tests).
-- **[`docs/PHASE_03_2_3_VALIDATION_REPORT.md`](docs/PHASE_03_2_3_VALIDATION_REPORT.md)** — Phase 03.2.3 Validation Report (C23-01 to C23-15 all PASS, 77 tests passing across monorepo).
-- **[`docs/PHASE_03_2_2_FINAL_AUDIT.md`](docs/PHASE_03_2_2_FINAL_AUDIT.md)** — Phase 03.2.2 Final Contract Integrity Audit Specification (Unprivileged loopback port boundaries 1024–65535, port loop and sensitive daemon rejection, 30-code error catalogue reconciliation, overview DTO credential shielding, and 100% concrete API route coverage).
-- **[`docs/PHASE_03_2_2_VALIDATION_REPORT.md`](docs/PHASE_03_2_2_VALIDATION_REPORT.md)** — Phase 03.2.2 Validation Report (C22-01 to C22-20 all PASS, 72 tests passing across monorepo).
-- **[`docs/PHASE_03_2_1_CONTRACTS_AUDIT.md`](docs/PHASE_03_2_1_CONTRACTS_AUDIT.md)** — Phase 03.2.1 Contracts Gap Audit & Hardening Specification (Strict literal loopback security, 30-entry error catalogue traceability matrix, complete DTOs, `.strict()` input validation, and 100% route coverage matrix).
-- **[`docs/PHASE_03_2_1_VALIDATION_REPORT.md`](docs/PHASE_03_2_1_VALIDATION_REPORT.md)** — Phase 03.2.1 Validation Report (C21-01 to C21-19 all PASS, 69 tests passing across monorepo).
-- **[`docs/PHASE_03_2_CONTRACTS_REPORT.md`](docs/PHASE_03_2_CONTRACTS_REPORT.md)** — Phase 03.2 Complete Contracts & API Schema Engineering Report (All 12 contract modules, Zod schemas, fixtures, and 55 tests passing).
-- **[`docs/PHASE_03_1_SCAFFOLDING_REPORT.md`](docs/PHASE_03_1_SCAFFOLDING_REPORT.md)** — Phase 03.1 Monorepo Scaffolding Report (Scaffolding verified: typecheck, lint, test, build all passing).
+[![Node.js Version](https://img.shields.io/badge/Node.js-%3E%3D24.0.0-brightgreen.svg)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)](https://www.typescriptlang.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Test Suite](https://img.shields.io/badge/Tests-541%20passing-success.svg)](https://vitest.dev/)
+[![Status](https://img.shields.io/badge/Release-v1.0.0--ready-orange.svg)](docs/RELEASE_NOTES_v1.0.0.md)
 
-## Current Normative Baseline (Phase 02 Architecture Final Closure)
+<p align="center">
+  A local-first, zero-dependency payment gateway simulator and developer laboratory.<br />
+  Test payment lifecycles, simulate success/failure scenarios, and receive authentic HMAC-signed webhooks on localhost.<br />
+  <b>Zero KYC. Zero external accounts. Zero cloud reverse tunnels. Zero databases.</b>
+</p>
 
-The current authoritative specification baseline for all implementation is:
-- **[`docs/PRD_v2.3.md`](docs/PRD_v2.3.md)** — Current Normative Product Requirements Document (v2.3.0).
-- **[`docs/FINAL_IMPLEMENTATION_READINESS.md`](docs/FINAL_IMPLEMENTATION_READINESS.md)** — Final Implementation Readiness & Engineering Seal.
-- **[`docs/PHASE_02_6_ENGINEERING_INTEGRITY_AUDIT.md`](docs/PHASE_02_6_ENGINEERING_INTEGRITY_AUDIT.md)** — Phase 02.6 Engineering Integrity Audit & Hardening Specification.
-- **[`docs/PHASE_02_6_VALIDATION_REPORT.md`](docs/PHASE_02_6_VALIDATION_REPORT.md)** — Phase 02.6 Validation Report.
-- **[`docs/PHASE_02_IMPLEMENTATION_SIGNOFF.md`](docs/PHASE_02_IMPLEMENTATION_SIGNOFF.md)** — Phase 02 Definitive Implementation Sign-Off & Architecture Seal.
-- **[`docs/PHASE_02_5_FINAL_VERIFICATION.md`](docs/PHASE_02_5_FINAL_VERIFICATION.md)** — Phase 02.5 Final Architecture Verification Specification.
-- **[`docs/PHASE_02_5_VALIDATION_REPORT.md`](docs/PHASE_02_5_VALIDATION_REPORT.md)** — Phase 02.5 Validation Report.
-- **[`docs/PHASE_02_FINAL_SIGNOFF.md`](docs/PHASE_02_FINAL_SIGNOFF.md)** — Phase 02.4 Architecture Sign-Off & Governance Seal.
-- **[`docs/PHASE_02_4_ENGINEERING_CORRECTIONS.md`](docs/PHASE_02_4_ENGINEERING_CORRECTIONS.md)** — Phase 02.4 Final Engineering Edge-Case Audit & Corrections.
-- **[`docs/PHASE_02_4_VALIDATION_REPORT.md`](docs/PHASE_02_4_VALIDATION_REPORT.md)** — Phase 02.4 Validation Report.
-- **[`docs/FINAL_IMPLEMENTATION_GATE.md`](docs/FINAL_IMPLEMENTATION_GATE.md)** — Final Implementation Gate & Release Governance.
-- **[`docs/PHASE_02_3_FINAL_CORRECTIONS.md`](docs/PHASE_02_3_FINAL_CORRECTIONS.md)** — Phase 02.3 Final Architecture Patch & Corrections.
-- **[`docs/PHASE_02_3_VALIDATION_REPORT.md`](docs/PHASE_02_3_VALIDATION_REPORT.md)** — Phase 02.3 Validation Report.
-- **[`docs/PHASE_02_2_GAP_RESOLUTION.md`](docs/PHASE_02_2_GAP_RESOLUTION.md)** — Phase 02.2 Final Technical Gap Resolution Specification.
-- **[`docs/PHASE_02_2_VALIDATION_REPORT.md`](docs/PHASE_02_2_VALIDATION_REPORT.md)** — Phase 02.2 Validation Report.
-- **[`docs/PHASE_02_SIGNOFF.md`](docs/PHASE_02_SIGNOFF.md)** — Phase 02 Architecture Sign-Off & Implementation Gate.
-- **[`docs/FINAL_CONSISTENCY_AUDIT.md`](docs/FINAL_CONSISTENCY_AUDIT.md)** — Final Documentation Consistency Audit & State-Machine Matrices.
-- **[`docs/FINAL_GAP_REGISTER.md`](docs/FINAL_GAP_REGISTER.md)** — Final Gap Register & Problem Catalog.
-- **[`docs/FINAL_ARCHITECTURE_AUDIT.md`](docs/FINAL_ARCHITECTURE_AUDIT.md)** — Hardened System Architecture Specification & Technical Audit.
-- **[`docs/ARCHITECTURE_GAP_REGISTER.md`](docs/ARCHITECTURE_GAP_REGISTER.md)** — Phase 02.1 Gap Catalog & Remediations.
-- **[`docs/PRD_v2.3_CHANGELOG.md`](docs/PRD_v2.3_CHANGELOG.md)** — Formal v2.3.0 Specification Changelog.
-- **[`docs/PRD_v2.3_RESOLUTION_REGISTER.md`](docs/PRD_v2.3_RESOLUTION_REGISTER.md)** — Resolution Register & Test Specifications (`V23-01` to `V23-25`).
+[Quick Start](#-quick-start) •
+[Features](#-key-features) •
+[Screenshots](#-product-screenshots) •
+[Architecture](#-architecture) •
+[Sample Receiver](#-sample-webhook-receiver) •
+[Documentation](#-documentation-index)
 
-## System Architecture Baseline
+</div>
 
-- **[`docs/SYSTEM_ARCHITECTURE.md`](docs/SYSTEM_ARCHITECTURE.md)** — System Architecture Specification (v1.1.0, 30 Sections).
-- **[`docs/ARCHITECTURE_DECISION_REGISTER.md`](docs/ARCHITECTURE_DECISION_REGISTER.md)** — Architecture Decision Records (v1.1.0, ADR-001 to ADR-010).
-- **[`docs/ARCHITECTURE_VALIDATION_REPORT.md`](docs/ARCHITECTURE_VALIDATION_REPORT.md)** — Architectural Compliance Report.
+---
 
-For a complete index of documentation, see **[`docs/README.md`](docs/README.md)**.
+> [!IMPORTANT]
+> **Project Limitations & Simulation Boundary**
+> PAYSIM is strictly an **offline simulation and developer testing laboratory**. It **does not** process real money, interact with real banking switches, connect to payment card networks (Visa/Mastercard), or communicate with UPI PSPs. All orders, payments, tokens, and credentials are completely synthetic and maintained exclusively in volatile in-memory storage.
+
+---
+
+## 💡 The Problem PAYSIM Solves
+
+Integrating payment gateways during local development is notoriously painful:
+
+- **KYC & Account Friction**: Setting up sandbox accounts typically requires company documentation, business verification, merchant KYC approval, and waiting periods.
+- **Webhook Tunneling Overhead**: Local machines cannot receive callbacks from external payment gateways without running third-party tunneling utilities (e.g. ngrok, localtunnel), which introduce latency, flaky connections, and URL renegotiation.
+- **Unreliable Edge-Case Testing**: Testing issuer declines, network timeouts, payment cancellations, or webhook retry exhaustion against real gateways is difficult or non-deterministic.
+- **Database Pollution**: Local development environments get cluttered with test transactions, orphaned payment states, and expired credentials.
+
+**PAYSIM eliminates this entirely.** It runs an entire payment gateway simulator directly on your loopback interface (`127.0.0.1`). You can create orders, simulate payment attempts, test embedded checkout flows, and receive real HTTP webhooks with cryptographic HMAC-SHA256 signatures — all on localhost.
+
+---
+
+## ⚡ Key Features
+
+- **100% Local & Self-Contained**: Binds strictly to `127.0.0.1`. Performs zero outbound external internet requests and requires zero database servers.
+- **Real Loopback Webhook Dispatches**: Sends authentic HTTP `POST` requests to local receiver endpoints (e.g., `http://127.0.0.1:9001/webhook`) with timing-safe HMAC-SHA256 signatures (`X-PaySim-Signature`).
+- **Deterministic Simulation Lab**: Simulate any payment outcome on demand: `success`, `failed`, `pending`, or `cancelled` with specific simulated error codes (e.g., `CARD_DECLINED`, `INSUFFICIENT_FUNDS`).
+- **Dual Wire Protocol**: Supports both native PAYSIM API formats and drop-in **Razorpay Orders & Checkout API compatibility** (`/v1/orders`, `X-Razorpay-Signature`).
+- **Interactive Developer Dashboard**: Modern React 18 + Vite developer interface with 9 views: Overview, Orders, Payments, Checkout Simulator, Webhooks, Deliveries, Events, Credentials, and Settings.
+- **Confronting Retry Engine**: Outbound webhook delivery engine with 5 concurrent workers, fixed retry schedule (Immediate, 500ms, 2000ms), and up to 3 manual retry allowances.
+- **Safe Bootstrap Control Token**: One-time ephemeral credential generated in volatile RAM and disclosed exclusively via terminal stdout; never persisted to disk (SET-02/SET-03).
+- **One-Command Dev Orchestration**: Launch both the Express backend and React dashboard with pre-flight port checks via `npm run dev`.
+
+---
+
+## 📸 Product Screenshots
+
+PAYSIM includes a comprehensive React 18 dashboard running on `http://127.0.0.1:5173`.
+
+### 1. Developer Dashboard Overview
+Real-time metrics, order throughput, delivery success rates, and quick-action shortcuts:
+![Dashboard Overview](docs/screenshots/dashboard_overview.png)
+
+### 2. Payments & Simulation Lab
+Inspect payment attempts and trigger deterministic outcome simulations:
+![Payments Simulation](docs/screenshots/payments_simulation.png)
+
+### 3. Webhook Delivery Inspector
+Inspect raw payload byte snapshots, latency, attempt history, and cryptographic signatures:
+![Deliveries Inspector](docs/screenshots/deliveries_inspector.png)
+
+### 4. Embedded Checkout Simulator
+Test customer checkout flows with simulated card and UPI methods:
+![Checkout Simulator](docs/screenshots/checkout_simulator.png)
+
+*(Additional screenshots for [Orders Management](docs/screenshots/orders_management.png), [Webhook Endpoints](docs/screenshots/webhook_endpoints.png), and [Events Explorer](docs/screenshots/events_explorer.png) are available in `docs/screenshots/`).*
+
+---
+
+## 🏗️ Architecture
+
+PAYSIM follows a strict layered architecture with in-memory persistence and isolated cryptographic vaults.
+
+```mermaid
+flowchart TD
+  subgraph Frontend["Developer Interface (127.0.0.1:5173)"]
+    UI["Developer Dashboard (React 18 + Vite)"]
+    SimLab["Simulation Lab"]
+  end
+
+  subgraph Backend["PAYSIM Core Gateway (127.0.0.1:8787)"]
+    subgraph Ingress["HTTP Routing & Controllers"]
+      NativeAPI["Native API (/api/v1/*)"]
+      CompatAPI["Razorpay Compat (/v1/*)"]
+      ControlAPI["Control & Auth (/control/v1/*)"]
+    end
+
+    subgraph ServiceLayer["Domain Services"]
+      OrderSvc["OrderService"]
+      PaymentSvc["PaymentService"]
+      WebhookSvc["WebhookService"]
+    end
+
+    subgraph StorageLayer["In-Memory State (CommitCoordinator)"]
+      RootState["RootState Container"]
+      LockMgr["Hierarchical Lock Manager"]
+      Vault["WebhookSecretVault & DeliveryBodyVault"]
+    end
+
+    subgraph DeliveryEngine["Webhook Delivery Engine"]
+      Queue["Bounded Delivery Queue (Max 100)"]
+      WorkerPool["5 Concurrent Workers"]
+      Dispatcher["Secure Loopback Dispatcher"]
+    end
+  end
+
+  subgraph LocalApp["Developer Machine"]
+    Receiver["Local Webhook Receiver (Port 9001)"]
+  end
+
+  UI --> Ingress
+  Ingress --> ServiceLayer
+  ServiceLayer --> StorageLayer
+  StorageLayer --> Queue
+  Queue --> WorkerPool
+  WorkerPool --> Dispatcher
+  Dispatcher -->|Loopback HTTP POST (127.0.0.1:[1024-65535])| Receiver
+```
+
+For comprehensive lifecycle sequence charts and retry state machines, see **[Architecture Diagrams](docs/ARCHITECTURE_DIAGRAMS.md)**.
+
+---
+
+## 🧰 Technology Stack
+
+| Layer | Technologies | Role |
+|-------|--------------|------|
+| **Runtime** | Node.js 24 LTS (ESM) | Core execution environment |
+| **Language** | TypeScript 5.6 | Strict static typing across monorepo |
+| **Backend** | Express 4.21 | HTTP server, routing, and controller pipeline |
+| **Frontend** | React 18.3, Vite 5.4 | Developer dashboard SPA |
+| **Validation** | Zod 3.23 | Frozen contract schemas and request validation |
+| **Storage** | In-Memory (`RootState`) | Pure state machines with atomic commit coordination |
+| **Security** | Native `node:crypto` | Constant-time HMAC-SHA256 & memory zeroization |
+| **Testing** | Vitest 2.1 | Fast parallel test runner (541 passing tests) |
+
+---
+
+## 🚀 Quick Start
+
+### 1. Prerequisites
+- **Node.js**: `>= 24.0.0` (`node -v`)
+- **npm**: `>= 10.0.0` (`npm -v`)
+
+### 2. Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/your-org/paysim.git
+cd paysim
+
+# Install dependencies across all monorepo packages
+npm ci
+
+# Verify environment diagnostics
+npm run doctor
+```
+
+### 3. Launch Development Environment
+
+```bash
+# Starts both Backend (8787) and Dashboard (5173) concurrently
+npm run dev
+```
+
+Open **[http://127.0.0.1:5173](http://127.0.0.1:5173)** in your browser. The one-time **Bootstrap Control Token** will be disclosed in your terminal.
+
+---
+
+## 📡 Sample Webhook Receiver
+
+PAYSIM includes a standalone, zero-dependency Node.js webhook receiver in `examples/node-webhook-receiver/`:
+
+```bash
+# In a separate terminal
+cd examples/node-webhook-receiver
+npm start
+```
+
+### Minimal HMAC-SHA256 Verification in 25 Lines:
+
+```javascript
+import http from 'node:http';
+import crypto from 'node:crypto';
+
+const SECRET = 'sample_secret_key_1234567890abcdef';
+
+http.createServer(async (req, res) => {
+  const chunks = [];
+  for await (const chunk of req) chunks.push(chunk);
+  const rawBody = Buffer.concat(chunks);
+
+  const sigHeader = (req.headers['x-paysim-signature'] || '').replace('sha256=', '').trim();
+  const computed = crypto.createHmac('sha256', SECRET).update(rawBody).digest('hex');
+
+  const isValid = sigHeader.length === computed.length &&
+    crypto.timingSafeEqual(Buffer.from(sigHeader, 'hex'), Buffer.from(computed, 'hex'));
+
+  if (!isValid) {
+    res.writeHead(401, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({ error: 'INVALID_SIGNATURE' }));
+  }
+
+  const payload = JSON.parse(rawBody.toString('utf8'));
+  console.log(`[RECEIVER] Received event: ${payload.type} (ID: ${payload.id})`);
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ received: true }));
+}).listen(9001, '127.0.0.1');
+```
+
+---
+
+## 🔌 API Examples
+
+Ready-to-use HTTP request files are provided in `examples/api/`:
+
+| File | Purpose |
+|------|---------|
+| [`create-order.http`](examples/api/create-order.http) | Exchange bootstrap token, rotate API credentials, and create orders |
+| [`simulate-payment.http`](examples/api/simulate-payment.http) | Create payment attempts and simulate `success` or `failed` outcomes |
+| [`create-webhook.http`](examples/api/create-webhook.http) | Register local webhook receiver endpoints and rotate signing secrets |
+| [`replay-event.http`](examples/api/replay-event.http) | Query historical domain events and replay to active endpoints |
+| [`retry-delivery.http`](examples/api/retry-delivery.http) | Inspect delivery attempts and trigger manual delivery retries |
+
+---
+
+## 🔒 Security Architecture
+
+- **Strict Loopback Confinement**: Outbound webhook dispatches are strictly restricted to `127.0.0.1` and `[::1]` on ports `1024` through `65535`. Dispatches to public IPs, cloud metadata endpoints (`169.254.169.254`), broadcast addresses, or the server's own listener ports are rejected at socket initiation.
+- **In-Memory Cryptographic Vaults**: Webhook signing secrets and delivery payload snapshots are isolated in dedicated memory vaults (`WebhookSecretVault`, `DeliveryBodyVault`). Secrets are scrubbed with zeroes (`0x00`) upon delivery exhaustion.
+- **Zero Local Secrets Persistence**: The one-time bootstrap token is generated in volatile RAM and disclosed strictly via terminal stdout (SET-02/SET-03). It is never written to disk, dotfiles, or browser storage.
+- **Contract Sanitization**: Public delivery API endpoints sanitize responses through `WebhookDeliveryEntitySchema` to prevent leaking internal scheduler or attempt metadata.
+
+For vulnerability reporting procedures, please review our **[Security Policy](SECURITY.md)**.
+
+---
+
+## 🧪 Testing & Quality Gates
+
+PAYSIM includes an extensive test suite ensuring strict protocol compliance and security boundaries:
+
+```bash
+# Run environment diagnostics
+npm run doctor
+
+# Run TypeScript compilation check
+npm run typecheck
+
+# Run ESLint static analysis
+npm run lint
+
+# Execute full Vitest suite (541 tests across 48 suites)
+npm test
+
+# Verify production build
+npm run build
+```
+
+---
+
+## 🤝 Contributing
+
+We welcome community contributions! Please read our **[Contributing Guidelines](CONTRIBUTING.md)** and **[Code of Conduct](CODE_OF_CONDUCT.md)** before opening issues or submitting pull requests.
+
+---
+
+## 📚 Documentation Index
+
+- **[Developer Quick Start Guide](docs/QUICK_START.md)** — Step-by-step onboarding walkthrough.
+- **[Architecture Diagrams](docs/ARCHITECTURE_DIAGRAMS.md)** — Detailed Mermaid specifications and sequence charts.
+- **[System Architecture](docs/SYSTEM_ARCHITECTURE.md)** — Hardened architectural specification.
+- **[Architecture Decision Register](docs/ARCHITECTURE_DECISION_REGISTER.md)** — ADR-001 through ADR-011.
+- **[Brand Assets & Favicon Spec](docs/BRAND_ASSETS.md)** — Visual identity tokens and SVG/ICO generation pipeline.
+- **[Demonstration Storyboard](docs/DEMO_STORYBOARD.md)** — 60–90 second product demonstration script.
+- **[Release Notes v1.0.0](docs/RELEASE_NOTES_v1.0.0.md)** — Version 1.0.0 release notes.
+- **[Release Checklist](docs/RELEASE_CHECKLIST.md)** — Pre-release maintainer verification checklist.
+
+---
+
+## 📄 License
+
+This project is licensed under the **[MIT License](LICENSE)**.
+
+```text
+Copyright (c) 2026 PAYSIM Contributors
+```

@@ -1,0 +1,48 @@
+name: CI Quality Gates
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build, Lint & Test (Node.js ${{ matrix.node-version }} on ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, windows-latest ]
+        node-version: [ 24.x ]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies (clean install)
+        run: npm ci --no-audit --no-fund
+
+      - name: TypeScript Typecheck
+        run: npm run typecheck
+
+      - name: ESLint Static Analysis
+        run: npm run lint
+
+      - name: Unit & Integration Test Suite (Vitest)
+        run: npm test
+
+      - name: Monorepo Production Build
+        run: npm run build
+
+      - name: Verify Environment Diagnostics (Doctor)
+        run: npm run doctor

@@ -6,6 +6,7 @@ import {
   RetryDeliveryRequestSchema,
   ReplayEventRequestSchema,
   PaginationQuerySchema,
+  WebhookDeliveryEntitySchema,
   type ReplayEventResponse,
 } from '@paysim/contracts';
 import type { ApplicationContext } from '../application/index.js';
@@ -65,7 +66,7 @@ export function createWebhookController(appContext: ApplicationContext) {
 
       res.status(200).json({
         object: 'list',
-        data: deliveries,
+        data: deliveries.map((d) => WebhookDeliveryEntitySchema.parse(d)),
         hasMore: false,
         totalCount: deliveries.length,
       });
@@ -73,7 +74,7 @@ export function createWebhookController(appContext: ApplicationContext) {
 
     getDelivery: async (req: Request, res: Response): Promise<void> => {
       const delivery = appContext.webhooks.getDelivery(req.params.id as string);
-      res.status(200).json(delivery);
+      res.status(200).json(WebhookDeliveryEntitySchema.parse(delivery));
     },
 
     retryDelivery: async (req: Request, res: Response): Promise<void> => {

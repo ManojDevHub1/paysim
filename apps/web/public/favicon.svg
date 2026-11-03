@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background: Deep Slate & Charcoal Fintech Void -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="55%" stop-color="#080c14" />
+      <stop offset="100%" stop-color="#05080f" />
+    </linearGradient>
+
+    <!-- Subtle Ambient Surface Lighting -->
+    <radialGradient id="ambientGlow" cx="28%" cy="22%" r="75%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.16" />
+      <stop offset="65%" stop-color="#38bdf8" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Squircle Border Subtle Illumination -->
+    <linearGradient id="borderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.45" />
+      <stop offset="40%" stop-color="#1e293b" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0.5" />
+    </linearGradient>
+
+    <!-- Primary Mark Gradient: Electric Cyan to Azure -->
+    <linearGradient id="primaryP" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#0284c7" />
+    </linearGradient>
+
+    <!-- Webhook Signal Waves Gradient: Vibrant Mint to Cyan Teal -->
+    <linearGradient id="signalWaves" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4ade80" />
+      <stop offset="100%" stop-color="#00f2fe" />
+    </linearGradient>
+
+    <!-- Elevation Drop Shadow for Mark -->
+    <filter id="markElevation" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#000000" flood-opacity="0.45" />
+    </filter>
+  </defs>
+
+  <!-- 1. Background Squircle -->
+  <rect x="16" y="16" width="480" height="480" rx="108" fill="url(#bgGrad)" stroke="url(#borderGrad)" stroke-width="4" />
+  <rect x="16" y="16" width="480" height="480" rx="108" fill="url(#ambientGlow)" />
+
+  <!-- 2. Master Mark (Centered composite at x=256, y=256) -->
+  <g filter="url(#markElevation)">
+    <!-- Seamless Geometric P Letterform -->
+    <path d="M 166 116
+             L 252 116
+             A 80 80 0 0 1 332 196
+             A 80 80 0 0 1 252 276
+             L 166 276
+             L 166 368
+             A 28 28 0 0 1 110 368
+             L 110 144
+             A 28 28 0 0 1 138 116
+             L 166 116 Z
+             M 166 172
+             L 246 172
+             A 24 24 0 0 1 270 196
+             A 24 24 0 0 1 246 220
+             L 166 220
+             Z"
+          fill="url(#primaryP)"
+          fill-rule="evenodd" />
+
+    <!-- Webhook Outbound Signal Arc 1 (Inner Wave: R=60, center=(292, 196)) -->
+    <path d="M 354 154 A 60 60 0 0 1 354 238"
+          fill="none"
+          stroke="url(#signalWaves)"
+          stroke-width="24"
+          stroke-linecap="round" />
+
+    <!-- Webhook Outbound Signal Arc 2 (Outer Wave: R=104, center=(292, 196)) -->
+    <path d="M 398 122 A 104 104 0 0 1 398 270"
+          fill="none"
+          stroke="url(#signalWaves)"
+          stroke-width="24"
+          stroke-linecap="round" />
+  </g>
+</svg>
