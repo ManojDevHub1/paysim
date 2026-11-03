@@ -152,14 +152,23 @@ describe('Exhausted Delivery, Manual Retry & Resource Retention (Phase 03.6.2)',
       // 4. Force all automatic attempts to fail (Attempts 1, 2, 3)
       // Allow automatic retry timers (500ms, 2000ms) to execute
       // Wait for attempt 1 (immediate), attempt 2 (+500ms), attempt 3 (+2000ms)
-      const waitForAttempts = async (targetCount: number, maxWaitMs = 6000) => {
+      const waitForAttempts = async (targetCount: number, maxWaitMs = 10000) => {
         const start = Date.now();
         while (Date.now() - start < maxWaitMs) {
           const current = app.webhooks.getDelivery(delivery.id);
-          if (current.attempts.length >= targetCount) return current;
-          await new Promise<void>((r) => setTimeout(r, 100));
+          if (current.attempts.length >= targetCount && current.status !== 'in_progress' && current.status !== 'pending') {
+            return current;
+          }
+          await new Promise<void>((r) => setTimeout(r, 50));
         }
-        return app.webhooks.getDelivery(delivery.id);
+        const current = app.webhooks.getDelivery(delivery.id);
+        if (current.attempts.length < targetCount) {
+          throw new Error(
+            `Timed out after ${maxWaitMs}ms waiting for target attempts: ${targetCount}. ` +
+            `Current attempts: ${current.attempts.length}, status: ${current.status}`
+          );
+        }
+        return current;
       };
 
       const exhaustedDel = await waitForAttempts(3);
@@ -213,7 +222,11 @@ describe('Exhausted Delivery, Manual Retry & Resource Retention (Phase 03.6.2)',
       expect(replayDelivery.secretVersion).toBe(2);
 
       // Wait for worker to dispatch replay
-      await new Promise<void>((r) => setTimeout(r, 200));
+      const replayStart = Date.now();
+      while (receivedRequests.length < 5 && Date.now() - replayStart < 5000) {
+        await new Promise<void>((r) => setTimeout(r, 50));
+      }
+      expect(receivedRequests.length).toBe(5);
 
       const attempt5Req = receivedRequests[4];
       const replayBody = Buffer.from(attempt5Req.body, 'utf8');
@@ -253,34 +266,60 @@ describe('Exhausted Delivery, Manual Retry & Resource Retention (Phase 03.6.2)',
 
       const delivery = app.webhooks.listDeliveries({ endpointId: endpointRes.endpoint.id })[0];
 
-      // Wait for 3 automatic attempts to exhaust
-      const waitForCount = async (count: number) => {
+      // Bounded condition-based wait helper targeting exact expected delivery state
+      const waitForDeliveryCondition = async (
+        predicate: (d: ReturnType<typeof app.webhooks.getDelivery>) => boolean,
+        description: string,
+        timeoutMs = 10000
+      ): Promise<ReturnType<typeof app.webhooks.getDelivery>> => {
         const start = Date.now();
-        while (Date.now() - start < 4000) {
+        while (Date.now() - start < timeoutMs) {
           const d = app.webhooks.getDelivery(delivery.id);
-          if (d.attempts.length >= count && d.status !== 'in_progress' && d.status !== 'pending') return d;
-          await new Promise<void>((r) => setTimeout(r, 100));
+          if (predicate(d)) {
+            return d;
+          }
+          await new Promise<void>((resolve) => setTimeout(resolve, 50));
         }
-        return app.webhooks.getDelivery(delivery.id);
+        const last = app.webhooks.getDelivery(delivery.id);
+        throw new Error(
+          `Timed out after ${timeoutMs}ms waiting for condition: [${description}]. ` +
+          `Observed state: status='${last.status}', attempts=${last.attempts.length}, ` +
+          `nextRetryAt=${last.nextRetryAt}, pendingInitiator=${last.pendingInitiator}`
+        );
       };
 
-      await waitForCount(3);
-      expect(app.webhooks.getDelivery(delivery.id).status).toBe('exhausted');
+      // 1. Wait for 3 automatic attempts to complete and reach terminal 'exhausted' status
+      const autoExhausted = await waitForDeliveryCondition(
+        (d) => d.attempts.length >= 3 && d.status === 'exhausted',
+        '3 automatic attempts exhausted'
+      );
+      expect(autoExhausted.status).toBe('exhausted');
+      expect(autoExhausted.attempts.length).toBe(3);
 
       // Manual Retry #1 (Attempt 4)
       await app.webhooks.retryDelivery({ deliveryId: delivery.id });
-      await waitForCount(4);
-      expect(app.webhooks.getDelivery(delivery.id).status).toBe('exhausted');
+      const manual1 = await waitForDeliveryCondition(
+        (d) => d.attempts.length >= 4 && d.status === 'exhausted',
+        'manual retry 1 (attempt 4) exhausted'
+      );
+      expect(manual1.status).toBe('exhausted');
+      expect(manual1.attempts.length).toBe(4);
 
       // Manual Retry #2 (Attempt 5)
       await app.webhooks.retryDelivery({ deliveryId: delivery.id });
-      await waitForCount(5);
-      expect(app.webhooks.getDelivery(delivery.id).status).toBe('exhausted');
+      const manual2 = await waitForDeliveryCondition(
+        (d) => d.attempts.length >= 5 && d.status === 'exhausted',
+        'manual retry 2 (attempt 5) exhausted'
+      );
+      expect(manual2.status).toBe('exhausted');
+      expect(manual2.attempts.length).toBe(5);
 
       // Manual Retry #3 (Attempt 6)
       await app.webhooks.retryDelivery({ deliveryId: delivery.id });
-      await waitForCount(6);
-      const fullyExhausted = app.webhooks.getDelivery(delivery.id);
+      const fullyExhausted = await waitForDeliveryCondition(
+        (d) => d.attempts.length >= 6 && d.status === 'exhausted',
+        'manual retry 3 (attempt 6) exhausted'
+      );
       expect(fullyExhausted.status).toBe('exhausted');
       expect(fullyExhausted.attempts.length).toBe(6);
 
