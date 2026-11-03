@@ -13,6 +13,7 @@ export interface StoredIdempotencyRecord {
   readonly statusCode: number;
   readonly responseHeaders: Readonly<Record<string, string>>;
   readonly responseMetadata: Readonly<Record<string, unknown>>; // Safe metadata, NEVER raw secret
+  readonly responseBody?: unknown; // Full serializable response body
   readonly disclosureRef?: string; // Opaque reference to WebhookSecretVault
   readonly createdAt: string;
   readonly expiresAt: number; // Unix epoch ms

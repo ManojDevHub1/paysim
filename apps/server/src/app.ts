@@ -1,66 +1,69 @@
-import express, { type Request, type Response, type NextFunction } from 'express';
-import cors from 'cors';
-import { generateId } from '@paysim/shared';
-import type { HealthCheckResponse, StandardErrorEnvelope } from '@paysim/contracts';
-import { config } from './config.js';
+import express, { type Express } from 'express';
+import {
+  createApplicationContext,
+  type ApplicationContext,
+} from './application/index.js';
+import {
+  requestIdMiddleware,
+  corsMiddleware,
+  errorMiddleware,
+  createGatewayRoutingMiddleware,
+  createFallbackMiddleware,
+} from './middleware/index.js';
+import { createHealthRouter } from './routes/health.routes.js';
+import { createNativeRouter } from './routes/native.routes.js';
+import { createCompatRouter } from './routes/compat.routes.js';
+import { createCheckoutRouter } from './routes/checkout.routes.js';
+import { createControlRouter } from './routes/control.routes.js';
 
-export function createApp() {
+export interface CreateAppOptions {
+  readonly appContext?: ApplicationContext;
+}
+
+/**
+ * Creates and configures the Express HTTP Application.
+ * Assembles middleware pipeline in exact security precedence:
+ * 1. Request ID assignment
+ * 2. Local loopback CORS
+ * 3. JSON body parsing (1mb limit)
+ * 4. Gateway Routing Precedence (501 unsupported provider feature, 404 Not Found, 405 Method Not Allowed with Allow header)
+ * 5. Normative Route Routers (System, Native, Compatibility, Checkout, Control)
+ * 6. Centralized Error Handler
+ */
+export function createApp(appContextOrOptions?: ApplicationContext | CreateAppOptions): Express {
+  const context: ApplicationContext =
+    appContextOrOptions && 'orders' in appContextOrOptions
+      ? appContextOrOptions
+      : (appContextOrOptions as CreateAppOptions)?.appContext ?? createApplicationContext();
+
   const app = express();
 
-  // Middleware: JSON Body parsing with raw buffer capture if needed
+  // 1. Ingress Request ID Middleware (attaches X-Request-Id header and res.locals.requestId)
+  app.use(requestIdMiddleware);
+
+  // 2. Loopback CORS Middleware (strict local loopback origin confinement)
+  app.use(corsMiddleware);
+
+  // 3. JSON Body Parser with strict 1mb limit
   app.use(express.json({ limit: '1mb' }));
 
-  // Middleware: Local loopback CORS
-  app.use(
-    cors({
-      origin: [
-        'http://127.0.0.1:5173',
-        'http://localhost:5173',
-        'http://127.0.0.1:8787',
-        'http://localhost:8787',
-      ],
-      credentials: true,
-    })
-  );
+  // 4. Gateway Routing Fallback Precedence (evaluates 501 / 405 with Allow / 404 before route handlers)
+  app.use(createGatewayRoutingMiddleware());
 
-  // Health check endpoint
-  app.get('/health', (_req: Request, res: Response) => {
-    const health: HealthCheckResponse = {
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      version: config.APP_VERSION,
-    };
-    res.status(200).json(health);
-  });
+  // 5. System Health check route (unauthenticated)
+  app.use(createHealthRouter());
 
-  // Catch-all 404 handler
-  app.use((req: Request, res: Response) => {
-    const errorEnvelope: StandardErrorEnvelope = {
-      simulated: true,
-      error: {
-        code: 'NOT_FOUND',
-        message: `Cannot ${req.method} ${req.path}`,
-        requestId: generateId('req_ps'),
-        details: [],
-      },
-    };
-    res.status(404).json(errorEnvelope);
-  });
+  // 6. Ingress Routers with Auth
+  app.use(createNativeRouter(context));
+  app.use(createCompatRouter(context));
+  app.use(createCheckoutRouter(context));
+  app.use(createControlRouter(context));
 
-  // Centralized Error Handler
-  app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-    const errorEnvelope: StandardErrorEnvelope = {
-      simulated: true,
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: err.message || 'An unexpected internal error occurred',
-        requestId: generateId('req_ps'),
-        details: [],
-      },
-    };
-    res.status(500).json(errorEnvelope);
-  });
+  // 7. Terminal catch-all fallback
+  app.use(createFallbackMiddleware());
+
+  // 8. Centralized Error Handling Middleware
+  app.use(errorMiddleware);
 
   return app;
 }
