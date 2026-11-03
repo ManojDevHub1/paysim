@@ -5,6 +5,8 @@ import { createApplicationContext } from '../../src/application/context.js';
 import {
   evaluateRetry,
   isManualRetryEligible,
+  getAutomaticAttemptsCount,
+  getManualAttemptsCount,
   MAX_AUTOMATIC_ATTEMPTS,
   MAX_MANUAL_RETRIES,
   RETRY_DELAYS_MS,
@@ -281,59 +283,73 @@ describe('Exhausted Delivery, Manual Retry & Resource Retention (Phase 03.6.2)',
           await new Promise<void>((resolve) => setTimeout(resolve, 50));
         }
         const last = app.webhooks.getDelivery(delivery.id);
+        const autoCount = getAutomaticAttemptsCount(last.attempts);
+        const manualCount = getManualAttemptsCount(last.attempts);
         throw new Error(
           `Timed out after ${timeoutMs}ms waiting for condition: [${description}]. ` +
           `Observed state: status='${last.status}', attempts=${last.attempts.length}, ` +
-          `nextRetryAt=${last.nextRetryAt}, pendingInitiator=${last.pendingInitiator}`
+          `automaticAttempts=${autoCount}, manualAttempts=${manualCount}, ` +
+          `nextRetryAt=${last.nextRetryAt}, pendingInitiator=${last.pendingInitiator}, ` +
+          `queueSize=${app.engine.queue.size}, isWorkerRunning=${app.engine.isRunning}`
         );
       };
 
       // 1. Wait for 3 automatic attempts to complete and reach terminal 'exhausted' status
       const autoExhausted = await waitForDeliveryCondition(
-        (d) => d.attempts.length >= 3 && d.status === 'exhausted',
+        (d) => d.attempts.length >= 3 && d.status === 'exhausted' && getAutomaticAttemptsCount(d.attempts) === 3,
         '3 automatic attempts exhausted'
       );
       expect(autoExhausted.status).toBe('exhausted');
       expect(autoExhausted.attempts.length).toBe(3);
+      expect(getAutomaticAttemptsCount(autoExhausted.attempts)).toBe(3);
+      expect(getManualAttemptsCount(autoExhausted.attempts)).toBe(0);
 
       // Manual Retry #1 (Attempt 4)
       await app.webhooks.retryDelivery({ deliveryId: delivery.id });
       const manual1 = await waitForDeliveryCondition(
-        (d) => d.attempts.length >= 4 && d.status === 'exhausted',
+        (d) => d.attempts.length >= 4 && d.status === 'exhausted' && getManualAttemptsCount(d.attempts) === 1,
         'manual retry 1 (attempt 4) exhausted'
       );
       expect(manual1.status).toBe('exhausted');
       expect(manual1.attempts.length).toBe(4);
+      expect(getManualAttemptsCount(manual1.attempts)).toBe(1);
 
       // Manual Retry #2 (Attempt 5)
       await app.webhooks.retryDelivery({ deliveryId: delivery.id });
       const manual2 = await waitForDeliveryCondition(
-        (d) => d.attempts.length >= 5 && d.status === 'exhausted',
+        (d) => d.attempts.length >= 5 && d.status === 'exhausted' && getManualAttemptsCount(d.attempts) === 2,
         'manual retry 2 (attempt 5) exhausted'
       );
       expect(manual2.status).toBe('exhausted');
       expect(manual2.attempts.length).toBe(5);
+      expect(getManualAttemptsCount(manual2.attempts)).toBe(2);
 
       // Manual Retry #3 (Attempt 6)
       await app.webhooks.retryDelivery({ deliveryId: delivery.id });
       const fullyExhausted = await waitForDeliveryCondition(
-        (d) => d.attempts.length >= 6 && d.status === 'exhausted',
+        (d) => d.attempts.length >= 6 && d.status === 'exhausted' && getManualAttemptsCount(d.attempts) === 3,
         'manual retry 3 (attempt 6) exhausted'
       );
       expect(fullyExhausted.status).toBe('exhausted');
       expect(fullyExhausted.attempts.length).toBe(6);
+      expect(getManualAttemptsCount(fullyExhausted.attempts)).toBe(3);
 
       // Attempt Manual Retry #4 (Attempt 7) -> Must throw invalid state transition / quota exceeded error
       await expect(
         app.webhooks.retryDelivery({ deliveryId: delivery.id })
       ).rejects.toThrow(/Maximum manual retries \(3\) exhausted/);
 
+      // Verify that rejected 4th manual retry does not increment attempts or mutate state
+      const afterRejected = app.webhooks.getDelivery(delivery.id);
+      expect(afterRejected.attempts.length).toBe(6);
+      expect(getManualAttemptsCount(afterRejected.attempts)).toBe(3);
+
       // Verify that after 3rd manual retry fails, the delivery is permanently exhausted:
       // Body is cleaned up from DeliveryBodyVault
       expect(app.bodyVault.hasBody(delivery.id)).toBe(false);
 
       await app.engine.stop();
-    });
+    }, 15000);
 
     it('rejects concurrent manual retry calls on the same delivery', async () => {
       const app = createApplicationContext({ autoStartEngine: true });

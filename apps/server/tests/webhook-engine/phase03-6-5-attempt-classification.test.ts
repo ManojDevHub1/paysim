@@ -148,14 +148,19 @@ describe('Phase 03.6.5 — Manual Retry Classification & Counter Integrity', () 
       expect(delivery).toBeDefined();
 
       // Step 1: Wait for Attempt 1 to execute and fail
-      const waitForCondition = async (predicate: (d: ReturnType<typeof app.webhooks.getDelivery>) => boolean, timeoutMs = 4000) => {
+      const waitForCondition = async (predicate: (d: ReturnType<typeof app.webhooks.getDelivery>) => boolean, timeoutMs = 6000) => {
         const start = Date.now();
         while (Date.now() - start < timeoutMs) {
           const d = app.webhooks.getDelivery(delivery.id);
           if (predicate(d)) return d;
           await new Promise<void>((r) => setTimeout(r, 50));
         }
-        return app.webhooks.getDelivery(delivery.id);
+        const last = app.webhooks.getDelivery(delivery.id);
+        throw new Error(
+          `Timed out after ${timeoutMs}ms waiting for condition in Task 2. ` +
+          `Observed state: status='${last.status}', attempts=${last.attempts.length}, ` +
+          `nextRetryAt=${last.nextRetryAt}, pendingInitiator=${last.pendingInitiator}`
+        );
       };
 
       // Wait until Attempt 1 fails and auto timer is set
@@ -421,17 +426,32 @@ describe('Phase 03.6.5 — Manual Retry Classification & Counter Integrity', () 
 
       const waitForAttemptCount = async (count: number) => {
         const start = Date.now();
-        while (Date.now() - start < 4500) {
+        while (Date.now() - start < 10000) {
           const d = app.webhooks.getDelivery(delivery.id);
-          if (d.attempts.length >= count && d.status !== 'in_progress' && d.status !== 'pending') return d;
-          await new Promise<void>((r) => setTimeout(r, 60));
+          if (
+            d.attempts.length >= count &&
+            d.status === 'exhausted' &&
+            d.status !== 'in_progress' &&
+            d.status !== 'pending'
+          ) {
+            return d;
+          }
+          await new Promise<void>((r) => setTimeout(r, 50));
         }
-        return app.webhooks.getDelivery(delivery.id);
+        const last = app.webhooks.getDelivery(delivery.id);
+        const autoCount = getAutomaticAttemptsCount(last.attempts);
+        const manualCount = getManualAttemptsCount(last.attempts);
+        throw new Error(
+          `Timed out after 10000ms waiting for attempt count >= ${count}. ` +
+          `Observed state: status='${last.status}', attempts=${last.attempts.length}, ` +
+          `automaticAttempts=${autoCount}, manualAttempts=${manualCount}, ` +
+          `nextRetryAt=${last.nextRetryAt}, pendingInitiator=${last.pendingInitiator}, ` +
+          `queueSize=${app.engine.queue.size}, isWorkerRunning=${app.engine.isRunning}`
+        );
       };
 
       // 1. Wait for 3 automatic attempts to complete and exhaust
-      await waitForAttemptCount(3);
-      const afterAuto = app.webhooks.getDelivery(delivery.id);
+      const afterAuto = await waitForAttemptCount(3);
       expect(afterAuto.attempts.length).toBe(3);
       expect(afterAuto.status).toBe('exhausted');
       expect(getAutomaticAttemptsCount(afterAuto.attempts)).toBe(3);
@@ -440,8 +460,7 @@ describe('Phase 03.6.5 — Manual Retry Classification & Counter Integrity', () 
 
       // 2. Manual Retry 1 (Attempt 4)
       await app.webhooks.retryDelivery({ deliveryId: delivery.id });
-      await waitForAttemptCount(4);
-      const afterManual1 = app.webhooks.getDelivery(delivery.id);
+      const afterManual1 = await waitForAttemptCount(4);
       expect(afterManual1.attempts.length).toBe(4);
       expect(afterManual1.status).toBe('exhausted');
       expect(getManualAttemptsCount(afterManual1.attempts)).toBe(1);
@@ -449,8 +468,7 @@ describe('Phase 03.6.5 — Manual Retry Classification & Counter Integrity', () 
 
       // 3. Manual Retry 2 (Attempt 5)
       await app.webhooks.retryDelivery({ deliveryId: delivery.id });
-      await waitForAttemptCount(5);
-      const afterManual2 = app.webhooks.getDelivery(delivery.id);
+      const afterManual2 = await waitForAttemptCount(5);
       expect(afterManual2.attempts.length).toBe(5);
       expect(afterManual2.status).toBe('exhausted');
       expect(getManualAttemptsCount(afterManual2.attempts)).toBe(2);
@@ -458,8 +476,7 @@ describe('Phase 03.6.5 — Manual Retry Classification & Counter Integrity', () 
 
       // 4. Manual Retry 3 (Attempt 6)
       await app.webhooks.retryDelivery({ deliveryId: delivery.id });
-      await waitForAttemptCount(6);
-      const afterManual3 = app.webhooks.getDelivery(delivery.id);
+      const afterManual3 = await waitForAttemptCount(6);
       expect(afterManual3.attempts.length).toBe(6);
       expect(afterManual3.status).toBe('exhausted');
       expect(getManualAttemptsCount(afterManual3.attempts)).toBe(3);
@@ -469,6 +486,11 @@ describe('Phase 03.6.5 — Manual Retry Classification & Counter Integrity', () 
       await expect(
         app.webhooks.retryDelivery({ deliveryId: delivery.id })
       ).rejects.toThrow(/Maximum manual retries \(3\) exhausted/);
+
+      // Verify that rejected 4th retry does not mutate attempts or state
+      const afterRejected = app.webhooks.getDelivery(delivery.id);
+      expect(afterRejected.attempts.length).toBe(6);
+      expect(getManualAttemptsCount(afterRejected.attempts)).toBe(3);
 
       // 6. Verify received requests on the wire
       expect(receivedRequests.length).toBe(6);
@@ -495,6 +517,6 @@ describe('Phase 03.6.5 — Manual Retry Classification & Counter Integrity', () 
       expect(app.bodyVault.hasBody(delivery.id)).toBe(false);
 
       await app.engine.stop();
-    });
+    }, 15000);
   });
 });
