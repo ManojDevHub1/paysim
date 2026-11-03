@@ -80,7 +80,13 @@ export class TransactionalOrderRepository {
     }
     const offset = filter?.offset ?? 0;
     const limit = filter?.limit ?? items.length;
-    return items.slice(offset, offset + limit);
+    const result = items.slice(offset, offset + limit);
+    if (this.readSet) {
+      for (const item of result) {
+        this.readSet.add(item.id);
+      }
+    }
+    return result;
   }
 
   public count(): number {

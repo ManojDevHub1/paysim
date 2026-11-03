@@ -159,6 +159,12 @@ export class CommitCoordinator {
       const readOrders = new Set<string>();
       const readPayments = new Set<string>();
       const readOrderPayments = new Set<string>();
+      const readSessions = new Set<string>();
+      const readPaymentSessions = new Set<string>();
+      const readEndpoints = new Set<string>();
+      const readDeliveries = new Set<string>();
+      const readEndpointDeliveries = new Set<string>();
+      const readIdempotency = new Set<string>();
 
       // Step 2: Prepare transactional repository context
       const orderRepo = new TransactionalOrderRepository(candidateOrders, readOrders);
@@ -171,12 +177,18 @@ export class CommitCoordinator {
       const sessionRepo = new TransactionalCheckoutSessionRepository(
         candidateSessions,
         candidatePayments,
-        candidateOrders
+        candidateOrders,
+        readSessions,
+        readPaymentSessions
       );
       const eventRepo = new TransactionalEventRepository(candidateEvents);
-      const endpointRepo = new TransactionalWebhookEndpointRepository(candidateEndpoints);
-      const deliveryRepo = new TransactionalWebhookDeliveryRepository(candidateDeliveries);
-      const idempotencyRepo = new TransactionalIdempotencyRepository(candidateIdempotency);
+      const endpointRepo = new TransactionalWebhookEndpointRepository(candidateEndpoints, readEndpoints);
+      const deliveryRepo = new TransactionalWebhookDeliveryRepository(
+        candidateDeliveries,
+        readDeliveries,
+        readEndpointDeliveries
+      );
+      const idempotencyRepo = new TransactionalIdempotencyRepository(candidateIdempotency, readIdempotency);
 
       const ctx: TransactionContext = {
         orders: orderRepo,
@@ -273,6 +285,46 @@ export class CommitCoordinator {
               throw new ConcurrencyConflictError('MockPayment', id, latestPayment.version, payment.version);
             }
           }
+          for (const [id] of sessionRepo.getMutations()) {
+            const latestSession = latest.sessions.get(id);
+            if (latestSession) {
+              throw new ConcurrencyConflictError('CheckoutSession', id, 1, 0);
+            }
+          }
+          for (const [id] of endpointRepo.getMutations()) {
+            const latestEndpoint = latest.endpoints.get(id);
+            if (latestEndpoint) {
+              throw new ConcurrencyConflictError('WebhookEndpoint', id, 1, 0);
+            }
+          }
+          for (const id of endpointRepo.getDeletions()) {
+            if (!latest.endpoints.has(id)) {
+              throw new ConcurrencyConflictError('WebhookEndpoint', id, 0, 1);
+            }
+          }
+          for (const [id] of deliveryRepo.getMutations()) {
+            const latestDelivery = latest.deliveries.get(id);
+            if (latestDelivery) {
+              throw new ConcurrencyConflictError('WebhookDelivery', id, 1, 0);
+            }
+          }
+          for (const [id] of idempotencyRepo.getMutations()) {
+            const latestRecord = latest.idempotency.get(id);
+            if (latestRecord) {
+              throw new ConcurrencyConflictError('IdempotencyRecord', id, 1, 0);
+            }
+          }
+          for (const id of idempotencyRepo.getDeletions()) {
+            if (!latest.idempotency.has(id)) {
+              throw new ConcurrencyConflictError('IdempotencyRecord', id, 0, 1);
+            }
+          }
+
+          // Retention write-write conflict check
+          if (candidateRetention !== current.retention && latest.retention !== current.retention) {
+            throw new ConcurrencyConflictError('RetentionState', 'retention', 1, 0);
+          }
+          const finalRetention = candidateRetention !== current.retention ? candidateRetention : latest.retention;
 
           // 2. Detect read-write anti-dependency conflicts (read-set conflicts)
           for (const orderId of readOrders) {
@@ -314,6 +366,96 @@ export class CommitCoordinator {
                 orderId,
                 latestCount,
                 currentCount
+              );
+            }
+          }
+          for (const sessionId of readSessions) {
+            const latestSession = latest.sessions.get(sessionId);
+            const baseSession = current.sessions.get(sessionId);
+            if (latestSession !== baseSession) {
+              throw new ConcurrencyConflictError(
+                'CheckoutSession(read-set)',
+                sessionId,
+                latestSession ? 1 : 0,
+                baseSession ? 1 : 0
+              );
+            }
+          }
+          for (const paymentId of readPaymentSessions) {
+            let currentFound = false;
+            for (const s of current.sessions.values()) {
+              if (s.paymentId === paymentId) {
+                currentFound = true;
+                break;
+              }
+            }
+            let latestFound = false;
+            for (const s of latest.sessions.values()) {
+              if (s.paymentId === paymentId) {
+                latestFound = true;
+                break;
+              }
+            }
+            if (currentFound !== latestFound) {
+              throw new ConcurrencyConflictError(
+                'PaymentSessions(read-set)',
+                paymentId,
+                latestFound ? 1 : 0,
+                currentFound ? 1 : 0
+              );
+            }
+          }
+          for (const endpointId of readEndpoints) {
+            const latestEndpoint = latest.endpoints.get(endpointId);
+            const baseEndpoint = current.endpoints.get(endpointId);
+            if (latestEndpoint !== baseEndpoint) {
+              throw new ConcurrencyConflictError(
+                'WebhookEndpoint(read-set)',
+                endpointId,
+                latestEndpoint ? 1 : 0,
+                baseEndpoint ? 1 : 0
+              );
+            }
+          }
+          for (const deliveryId of readDeliveries) {
+            const latestDelivery = latest.deliveries.get(deliveryId);
+            const baseDelivery = current.deliveries.get(deliveryId);
+            if (latestDelivery !== baseDelivery) {
+              throw new ConcurrencyConflictError(
+                'WebhookDelivery(read-set)',
+                deliveryId,
+                latestDelivery ? 1 : 0,
+                baseDelivery ? 1 : 0
+              );
+            }
+          }
+          for (const endpointId of readEndpointDeliveries) {
+            let currentCount = 0;
+            for (const d of current.deliveries.values()) {
+              if (d.endpointId === endpointId) currentCount++;
+            }
+            let latestCount = 0;
+            for (const d of latest.deliveries.values()) {
+              if (d.endpointId === endpointId) latestCount++;
+            }
+            if (currentCount !== latestCount) {
+              throw new ConcurrencyConflictError(
+                'EndpointDeliveries(read-set)',
+                endpointId,
+                latestCount,
+                currentCount
+              );
+            }
+          }
+          for (const key of readIdempotency) {
+            const latestRec = latest.idempotency.get(key);
+            const baseRec = current.idempotency.get(key);
+            if (latestRec !== baseRec) {
+              throw new ConcurrencyConflictError(
+                'IdempotencyRecord(read-set)',
+                key,
+                latestRec ? 1 : 0,
+                baseRec ? 1 : 0
               );
             }
           }
@@ -421,7 +563,7 @@ export class CommitCoordinator {
             endpoints: new ReadonlyStateMap(rebasedEndpoints),
             deliveries: new ReadonlyStateMap(rebasedDeliveries),
             idempotency: new ReadonlyStateMap(rebasedIdempotency),
-            retention: candidateRetention,
+            retention: finalRetention,
             nextGlobalSeq: nextSeq,
             version: latest.version + 1n,
           });

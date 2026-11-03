@@ -80,14 +80,18 @@ export class TransactionalCheckoutSessionRepository {
   constructor(
     private readonly sessionsMap: Map<string, Readonly<CheckoutSessionEntity>>,
     private readonly paymentsMap?: Map<string, Readonly<MockPayment>>,
-    private readonly ordersMap?: Map<string, Readonly<MockOrder>>
+    private readonly ordersMap?: Map<string, Readonly<MockOrder>>,
+    private readonly readSessionsSet?: Set<string>,
+    private readonly readPaymentSessionsSet?: Set<string>
   ) {}
 
   public get(id: string): Readonly<CheckoutSessionEntity> | undefined {
+    this.readSessionsSet?.add(id);
     return this.sessionsMap.get(id);
   }
 
   public getByPaymentId(paymentId: string): Readonly<CheckoutSessionEntity> | undefined {
+    this.readPaymentSessionsSet?.add(paymentId);
     for (const session of this.sessionsMap.values()) {
       if (session.paymentId === paymentId) {
         return session;
@@ -99,6 +103,7 @@ export class TransactionalCheckoutSessionRepository {
   public getByTokenHash(tokenHash: string): Readonly<CheckoutSessionEntity> | undefined {
     for (const session of this.sessionsMap.values()) {
       if (session.opaqueTokenHash === tokenHash) {
+        this.readSessionsSet?.add(session.id);
         return session;
       }
     }
@@ -110,13 +115,20 @@ export class TransactionalCheckoutSessionRepository {
     for (const session of this.sessionsMap.values()) {
       if (session.orderId === orderId) {
         results.push(session);
+        this.readSessionsSet?.add(session.id);
       }
     }
     return results;
   }
 
   public list(): readonly Readonly<CheckoutSessionEntity>[] {
-    return Array.from(this.sessionsMap.values());
+    const items = Array.from(this.sessionsMap.values());
+    if (this.readSessionsSet) {
+      for (const s of items) {
+        this.readSessionsSet.add(s.id);
+      }
+    }
+    return items;
   }
 
   public count(): number {

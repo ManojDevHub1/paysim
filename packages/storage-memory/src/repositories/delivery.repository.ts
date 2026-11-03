@@ -101,17 +101,24 @@ export class TransactionalWebhookDeliveryRepository {
   private readonly _mutations = new Map<string, Readonly<WebhookDeliveryEntity>>();
   private _isClosed = false;
 
-  constructor(private readonly deliveriesMap: Map<string, Readonly<WebhookDeliveryEntity>>) {}
+  constructor(
+    private readonly deliveriesMap: Map<string, Readonly<WebhookDeliveryEntity>>,
+    private readonly readDeliveriesSet?: Set<string>,
+    private readonly readEndpointDeliveriesSet?: Set<string>
+  ) {}
 
   public get(id: string): Readonly<WebhookDeliveryEntity> | undefined {
+    this.readDeliveriesSet?.add(id);
     return this.deliveriesMap.get(id);
   }
 
   public listByEndpointId(endpointId: string): readonly Readonly<WebhookDeliveryEntity>[] {
+    this.readEndpointDeliveriesSet?.add(endpointId);
     const results: Readonly<WebhookDeliveryEntity>[] = [];
     for (const delivery of this.deliveriesMap.values()) {
       if (delivery.endpointId === endpointId) {
         results.push(delivery);
+        this.readDeliveriesSet?.add(delivery.id);
       }
     }
     return results;
@@ -122,6 +129,7 @@ export class TransactionalWebhookDeliveryRepository {
     for (const delivery of this.deliveriesMap.values()) {
       if (delivery.eventId === eventId) {
         results.push(delivery);
+        this.readDeliveriesSet?.add(delivery.id);
       }
     }
     return results;
@@ -132,12 +140,16 @@ export class TransactionalWebhookDeliveryRepository {
     for (const delivery of this.deliveriesMap.values()) {
       if (delivery.orderId === orderId) {
         results.push(delivery);
+        this.readDeliveriesSet?.add(delivery.id);
       }
     }
     return results;
   }
 
   public list(filter?: DeliveryListFilter): readonly Readonly<WebhookDeliveryEntity>[] {
+    if (filter?.endpointId) {
+      this.readEndpointDeliveriesSet?.add(filter.endpointId);
+    }
     let items = Array.from(this.deliveriesMap.values());
     if (filter?.status) {
       items = items.filter((d) => d.status === filter.status);
@@ -153,7 +165,13 @@ export class TransactionalWebhookDeliveryRepository {
     }
     const offset = filter?.offset ?? 0;
     const limit = filter?.limit ?? items.length;
-    return items.slice(offset, offset + limit);
+    const paged = items.slice(offset, offset + limit);
+    if (this.readDeliveriesSet) {
+      for (const d of paged) {
+        this.readDeliveriesSet.add(d.id);
+      }
+    }
+    return paged;
   }
 
   public count(): number {

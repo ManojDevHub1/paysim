@@ -1,4 +1,4 @@
-# PAYSIM — Phase 03.3.2.2 Validation Report
+# PAYSIM — Phase 03.3.2.2 & 03.3.2.3 Validation Report
 
 **Role:** Principal TypeScript Concurrency Engineer  
 **Project:** PAYSIM — Local Payment Gateway Simulator & Webhook Testing Laboratory  
@@ -12,31 +12,35 @@
 
 | Check ID | Category | Requirement / Invariant | Verification Method & Evidence | Status |
 |---|---|---|---|:---:|
-| **C3322-01** | Concurrency | Read-write anti-dependency protection | `read-write-isolation.test.ts`: Tx A and Tx B reading same order concurrently; Tx B rejected with `ConcurrencyConflictError`; exactly 1 active attempt committed | **PASS** |
-| **C3322-02** | Concurrency | Pessimistic order locking | `read-write-isolation.test.ts`: Both transactions acquire `order:<id>`; serialized sequentially; second transaction safely rejected by domain validation | **PASS** |
-| **C3322-03** | Concurrency | Optimistic read-set tracking | [`CommitCoordinator.transaction`](file:///e:/All%20Project/Paysim/packages/storage-memory/src/coordinator/commit-coordinator.ts#L223): Tracks `readOrders` and `readOrderPayments`; invalidates transactions whose read snapshot changed | **PASS** |
-| **C3322-04** | Immutability | True Map immutability on RootState | [`ReadonlyStateMap`](file:///e:/All%20Project/Paysim/packages/storage-memory/src/state/readonly-map.ts): Omission of `.set()`, `.delete()`, `.clear()` verified via runtime exception | **PASS** |
-| **C3322-05** | Immutability | Post-commit context closure | `read-write-isolation.test.ts`: Calling `.insert()` or `.update()` on leaked `TransactionContext` after commit throws `TRANSACTION_CLOSED` | **PASS** |
-| **C3322-06** | Immutability | Deep-frozen entity protection | `read-write-isolation.test.ts`: Mutating nested properties (`notes`) or arrays (`paymentAttemptIds`) throws `TypeError` | **PASS** |
-| **C3322-07** | Immutability | Historical snapshot independence | `read-write-isolation.test.ts`: Snapshots 0 and 1 remain completely unchanged after Commit 2 | **PASS** |
-| **C3322-08** | Security | Raw secret buffer isolation & zeroization | `read-write-isolation.test.ts`: Raw secret buffer isolated in `WebhookSecretVault`; zeroized with 0x00 upon eviction | **PASS** |
-| **C3322-09** | Retention | Authoritative retention metadata | `TransactionContext.updateRetention`: Retention slots and active secret versions updated atomically; rollbacks verified | **PASS** |
-| **C3322-10** | Retention | Idempotent delivery reference release | `read-write-isolation.test.ts`: `DeliveryReferenceTracker` guarantees reference release occurs exactly once | **PASS** |
-| **C3322-11** | Repositories | Complete aggregate mutation coverage | `read-write-isolation.test.ts`: All 8 RootState collections reject direct external mutation with `TRANSACTION_REQUIRED` | **PASS** |
-| **C3322-12** | Sequencing | Monotonic gap-free event sequencing | `concurrency-integrity.test.ts`: Failed transactions consume zero sequences; concurrent transactions receive strictly increasing sequences | **PASS** |
-| **C3322-13** | Sequencing | Lossless decimal string wire encoding | `sequencer.test.ts`: Decimal-string serialization verified for native `bigint` values | **PASS** |
-| **C3322-14** | Failure | Failure injection across all transaction stages | `concurrency-integrity.test.ts`: Pre-commit aborts leave state 100% untouched; all locks guaranteed released | **PASS** |
-| **C3322-15** | Environment | Git baseline & .gitignore configuration | Inspected `.gitignore`; added TypeScript build cache (`*.tsbuildinfo`) and tool artifacts (`.gemini/`); working tree preserved | **PASS** |
-| **C3322-16** | Quality Gates | Monorepo pipeline & fixture preservation | 287 unit tests passing across 18 test suites, 0 ESLint warnings, 0 type errors, clean Vite build, 100% fixture byte exactness | **PASS** |
+| **C3323-01** | Failure Stage 1 | Lock acquisition timeout/abort | `failure-injection.test.ts`: Contended lock & aborted signal leave state unchanged, release locks, 0 sequences consumed | **PASS** |
+| **C3323-02** | Failure Stage 2 | Snapshot acquisition error | `failure-injection.test.ts`: Transient stateHolder failure leaves state untouched, releases locks | **PASS** |
+| **C3323-03** | Failure Stage 3 | Candidate construction error | `failure-injection.test.ts`: Map unpacking error aborts cleanly without partial mutations, releases locks | **PASS** |
+| **C3323-04** | Failure Stage 4 | Repository mutation failure | `failure-injection.test.ts`: Mid-transaction exception rolls back all candidate inserts, closes context | **PASS** |
+| **C3323-05** | Failure Stage 5 | Cross-aggregate invariant check | `failure-injection.test.ts`: Orphan session referencing non-existent payment triggers `InvariantViolationError` and rolls back | **PASS** |
+| **C3323-06** | Failure Stage 6 | Capacity validation bounds | `failure-injection.test.ts`: Candidate map exceeding 2,000 orders triggers `StorageCapacityError` and aborts | **PASS** |
+| **C3323-07** | Failure Stage 7 | Event sequence allocation collision | `failure-injection.test.ts`: Duplicate event ID failure consumes 0 sequences; subsequent commit receives next continuous seq | **PASS** |
+| **C3323-08** | Failure Stage 8 | Before pointer swap conflict | `failure-injection.test.ts`: OCC conflict detected right before pointer swap; authoritative state preserved | **PASS** |
+| **C3323-09** | Concurrency | Order read-write conflict | `read-write-isolation.test.ts`: Concurrent payment attempt creation on read order rejected with `ConcurrencyConflictError` | **PASS** |
+| **C3323-10** | Concurrency | Session read-write conflict | `failure-injection.test.ts`: Concurrent session update while another tx reads it fails with `ConcurrencyConflictError` | **PASS** |
+| **C3323-11** | Concurrency | Endpoint read-write conflict | `failure-injection.test.ts`: Concurrent endpoint deletion while another tx reads it fails with `ConcurrencyConflictError` | **PASS** |
+| **C3323-12** | Concurrency | Idempotency read-write conflict | `failure-injection.test.ts`: Concurrent update to read idempotency record fails with `ConcurrencyConflictError` | **PASS** |
+| **C3323-13** | Concurrency | Deliveries count read conflict | `failure-injection.test.ts`: Concurrent delivery append for read endpoint fails with `ConcurrencyConflictError` | **PASS** |
+| **C3323-14** | Concurrency | Retention write-write conflict | `failure-injection.test.ts`: Concurrent updates to `RetentionState` fail with `ConcurrencyConflictError` | **PASS** |
+| **C3323-15** | Immutability | True Map immutability on RootState | [`ReadonlyStateMap`](file:///e:/All%20Project/Paysim/packages/storage-memory/src/state/readonly-map.ts): Omission of `.set()`, `.delete()`, `.clear()` throws `TypeError` | **PASS** |
+| **C3323-16** | Immutability | Post-commit context closure | `read-write-isolation.test.ts`: Calling `.insert()` or `.update()` on closed `TransactionContext` throws `TRANSACTION_CLOSED` | **PASS** |
+| **C3323-17** | Immutability | Deep-frozen entity protection | `read-write-isolation.test.ts`: Mutating nested properties (`notes`) or arrays (`paymentAttemptIds`) throws `TypeError` | **PASS** |
+| **C3323-18** | Security | Raw secret buffer isolation | `failure-injection.test.ts`: `RootState` is 100% serializable without `Buffer` instances; raw secrets kept in vault | **PASS** |
+| **C3323-19** | Publication | Authoritative RootState pointer swap | `failure-injection.test.ts`: Pointer swap is synchronous, non-throwing, and the sole publication point | **PASS** |
+| **C3323-20** | Quality Gates | Monorepo pipeline & fixture exactness | 303 unit tests passing across 19 test suites, 0 ESLint warnings, 0 type errors, clean Vite build, 100% fixture byte match | **PASS** |
 
 ---
 
 ## 2. Test Suite Summary
 
 ```
-Test Files  18 passed (18)
-     Tests  287 passed (287)  [+9 new isolation tests]
-  Duration  1.26s
+Test Files  19 passed (19)
+     Tests  303 passed (303)  [+16 failure injection & anti-dependency tests]
+  Duration  1.95s
 ```
 
 ### Monorepo Test Breakdown
@@ -57,6 +61,7 @@ Test Files  18 passed (18)
 - `packages/storage-memory/tests/repositories.test.ts`: 17 tests
 - `packages/storage-memory/tests/concurrency-integrity.test.ts`: 14 tests
 - `packages/storage-memory/tests/read-write-isolation.test.ts`: 9 tests
+- `packages/storage-memory/tests/failure-injection.test.ts`: 16 tests
 - `apps/server/tests/server.test.ts`: 2 tests
 
 ---
@@ -72,13 +77,15 @@ Test Files  18 passed (18)
 
 ---
 
-## 4. Final Certification
+## 4. Remaining Limitations
 
-Phase 03.3.2.2 is certified complete. The transactional state engine guarantees:
-1. Anti-dependency protection against read-write anomalies under concurrent execution.
-2. Complete structural immutability of committed `RootState` snapshots and closed repository contexts.
-3. Strict cryptographic isolation and zeroization of webhook secrets.
-4. Complete transactional coverage across all 8 collections.
-5. 100% clean monorepo pipeline (287 passing tests, 0 warnings, 0 type errors).
+1. **In-Memory Non-Durability:** In-memory storage is ephemeral across process restarts. Persistence and state re-hydration from external storage will be introduced in subsequent phases.
+2. **Single-Process Constraint:** Concurrency management relies on in-process JavaScript mutexes and single-threaded reference updates; distributed cluster deployment is outside current architectural scope.
+3. **Application-Level OCC Retries:** When a transaction aborts due to `ConcurrencyConflictError`, retry logic must be coordinated by the invoking service or endpoint handler.
 
-Phase 03.3.3 awaits explicit authorization to proceed.
+---
+
+## 5. Final Certification
+
+Phase 03.3.2 is certified 100% complete. All 20 compliance checks pass.
+Phase 03.3.3 awaits explicit user authorization to proceed.

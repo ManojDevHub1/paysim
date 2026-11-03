@@ -54,14 +54,24 @@ export class TransactionalWebhookEndpointRepository {
   private readonly _deletions = new Set<string>();
   private _isClosed = false;
 
-  constructor(private readonly endpointsMap: Map<string, Readonly<WebhookEndpointEntity>>) {}
+  constructor(
+    private readonly endpointsMap: Map<string, Readonly<WebhookEndpointEntity>>,
+    private readonly readEndpointsSet?: Set<string>
+  ) {}
 
   public get(id: string): Readonly<WebhookEndpointEntity> | undefined {
+    this.readEndpointsSet?.add(id);
     return this.endpointsMap.get(id);
   }
 
   public list(): readonly Readonly<WebhookEndpointEntity>[] {
-    return Array.from(this.endpointsMap.values());
+    const items = Array.from(this.endpointsMap.values());
+    if (this.readEndpointsSet) {
+      for (const ep of items) {
+        this.readEndpointsSet.add(ep.id);
+      }
+    }
+    return items;
   }
 
   public count(): number {

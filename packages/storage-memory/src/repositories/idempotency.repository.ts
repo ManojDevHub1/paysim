@@ -43,14 +43,24 @@ export class TransactionalIdempotencyRepository {
   private readonly _deletions = new Set<string>();
   private _isClosed = false;
 
-  constructor(private readonly idempotencyMap: Map<string, Readonly<StoredIdempotencyRecord>>) {}
+  constructor(
+    private readonly idempotencyMap: Map<string, Readonly<StoredIdempotencyRecord>>,
+    private readonly readIdempotencySet?: Set<string>
+  ) {}
 
   public get(key: string): Readonly<StoredIdempotencyRecord> | undefined {
+    this.readIdempotencySet?.add(key);
     return this.idempotencyMap.get(key);
   }
 
   public list(): readonly Readonly<StoredIdempotencyRecord>[] {
-    return Array.from(this.idempotencyMap.values());
+    const items = Array.from(this.idempotencyMap.values());
+    if (this.readIdempotencySet) {
+      for (const rec of items) {
+        this.readIdempotencySet.add(rec.key);
+      }
+    }
+    return items;
   }
 
   public count(): number {
