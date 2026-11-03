@@ -1,0 +1,1 @@
+{"createdAt":"2026-11-03T00:00:00.000Z","data":{"object":{"amount":129900,"currency":"INR","id":"pay_ps_fixture_001","method":"mock_upi","orderId":"ord_ps_fixture_001","simulated":true,"status":"captured"}},"id":"evt_ps_fixture_001","livemode":false,"simulated":true,"type":"payment.captured"}

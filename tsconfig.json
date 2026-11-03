@@ -1,0 +1,13 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/shared" },
+    { "path": "./packages/contracts" },
+    { "path": "./packages/crypto" },
+    { "path": "./packages/domain" },
+    { "path": "./packages/storage-memory" },
+    { "path": "./apps/server" },
+    { "path": "./apps/web" },
+    { "path": "./tests" }
+  ]
+}

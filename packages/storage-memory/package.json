@@ -1,0 +1,25 @@
+{
+  "name": "@paysim/storage-memory",
+  "version": "1.0.0",
+  "description": "In-memory bounded repositories and single RootState container infrastructure",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "dependencies": {
+    "@paysim/contracts": "*",
+    "@paysim/crypto": "*",
+    "@paysim/domain": "*",
+    "@paysim/shared": "*"
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "node -e \"const fs = require('fs'); fs.rmSync('dist', { recursive: true, force: true });\"",
+    "typecheck": "tsc --noEmit"
+  }
+}

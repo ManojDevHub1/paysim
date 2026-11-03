@@ -1,0 +1,1 @@
+{"contains":["payment"],"created_at":1793664000,"entity":"event","event":"payment.captured","id":"evt_ps_fixture_001","livemode":false,"payload":{"payment":{"entity":{"amount":129900,"captured":true,"currency":"INR","id":"pay_ps_fixture_001","order_id":"order_ps_fixture_001","simulated":true,"status":"captured"}}},"simulated":true}

@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Production builds
+dist/
+build/
+.turbo/
+
+# Testing & Coverage
+coverage/
+*.lcov
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# TypeScript build cache
+*.tsbuildinfo
+
+# Tool & Editor artifacts
+.gemini/
+.vscode/
+.idea/
+
+# OS artifacts
+.DS_Store
+Thumbs.db

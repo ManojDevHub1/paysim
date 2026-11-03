@@ -1,0 +1,34 @@
+{
+  "name": "paysim-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PAYSIM — Local-First Payment Workflow Simulator & Webhook Testing Laboratory",
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0",
+    "npm": ">=10.0.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "tsc --build && npm run build --workspace=apps/web",
+    "build:force": "tsc --build --force && npm run build --workspace=apps/web",
+    "clean": "tsc --build --clean && npm run clean --workspaces --if-present",
+    "lint": "eslint .",
+    "typecheck": "tsc --build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "dev:server": "npm run dev --workspace=apps/server",
+    "dev:web": "npm run dev --workspace=apps/web"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.14.0",
+    "@types/node": "^22.10.0",
+    "eslint": "^9.14.0",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.13.0",
+    "vitest": "^2.1.4"
+  }
+}
