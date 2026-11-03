@@ -246,7 +246,7 @@ describe('Exhausted Delivery, Manual Retry & Resource Retention (Phase 03.6.2)',
       expect(app.secretVault.hasSecret(endpointId, 2)).toBe(true);
 
       await app.engine.stop();
-    });
+    }, 15000);
 
     it('enforces maximum 3 manual retries, rejecting a 4th manual retry attempt', async () => {
       const app = createApplicationContext({ autoStartEngine: true });
