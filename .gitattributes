@@ -1,0 +1,7 @@
+# PAYSIM Cross-Platform Git Attributes
+# Disable text normalization for byte-sensitive webhook test fixtures
+
+fixtures/events-compat/payment.captured.body.json -text
+fixtures/events-compat/payment.captured.json -text
+fixtures/events-native/payment.captured.body.json -text
+fixtures/events-native/payment.captured.json -text
