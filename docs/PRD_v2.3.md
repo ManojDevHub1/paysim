@@ -1,22 +1,24 @@
 # PAYSIM — Product Requirements Document
 
-**Document version:** 2.3.0  
-**Status:** Normative specification baseline — v2.3 architecture hardened; implementation and tests not yet executed  
-**Document owner:** PAYSIM Project  
-**Product category:** Local-first payment workflow simulator and webhook testing tool  
-**Primary audience:** MERN, Node.js, React, and full-stack developers; students learning payment integrations  
-**Default mode:** Local-only simulation; no real payment processing  
-**Currency scope for MVP:** INR only  
-**Storage for MVP:** Bounded in-memory session storage; no database  
-**Target operating systems:** Windows 11, macOS, and mainstream Linux distributions  
-**Runtime target:** Node.js 24.x (Maintenance LTS) and 26.x (Active LTS) as of November 2026  
-**Last updated:** 3 November 2026  
+**Document version:** 2.3.0
+**Status:** Authoritative normative specification for PAYSIM v1.0.0. Implementation and verification status for individual requirements is documented in IMPLEMENTATION_TRACEABILITY.md.
+**Document owner:** PAYSIM Project
+**Product category:** Local-first payment workflow simulator and webhook testing tool
+**Primary audience:** MERN, Node.js, React, and full-stack developers; students learning payment integrations
+**Default mode:** Local-only simulation; no real payment processing
+**Currency scope for MVP:** INR only
+**Storage for MVP:** Bounded in-memory session storage; no database
+**Target operating systems:** Windows 11, macOS, and mainstream Linux distributions
+**Runtime target:** Node.js 24.x (Maintenance LTS) and 26.x (Active LTS) as of November 2026
+**Last updated:** 4 November 2026
 
 ---
 
 ## Document Purpose and Status
 
-This document is the sole normative specification and single source of truth for the PAYSIM MVP. PRD v1.0, v2.0, v2.1, and v2.2 are retained as immutable archives. Version 2.3 resolves the Phase 02.1 technical audit findings around cross-origin embedded iframe authentication, SameSite cookie limitations, idempotent checkout session capability recovery, capability expiration semantics, secret version retention during asynchronous callback signing, delivery-mode snapshotting, strict loopback SSRF defense for Docker/WSL, and deterministic webhook serialization.
+This document is the sole authoritative normative specification and single source of truth for the PAYSIM project. PRD v1.0, v2.0, v2.1, and v2.2 are retained as immutable archives. Version 2.3 resolves the Phase 02.1 technical audit findings around cross-origin embedded iframe authentication, SameSite cookie limitations, idempotent checkout session capability recovery, capability expiration semantics, secret version retention during asynchronous callback signing, delivery-mode snapshotting, strict loopback SSRF defense for Docker/WSL, and deterministic webhook serialization.
+
+Authoritative normative specification for PAYSIM v1.0.0. Implementation and verification status for individual requirements is documented in [IMPLEMENTATION_TRACEABILITY.md](IMPLEMENTATION_TRACEABILITY.md). A passing automated test suite does not imply that every PRD requirement or post-MVP feature is fully implemented. For a detailed requirement-by-requirement audit distinguishing implemented & verified, partially implemented, not verified, and deferred items, refer to [IMPLEMENTATION_TRACEABILITY.md](IMPLEMENTATION_TRACEABILITY.md).
 
 The design deliberately combines two integration surfaces over a single domain core:
 

@@ -284,6 +284,8 @@ We welcome community contributions! Please read our **[Contributing Guidelines](
 
 ## 📚 Documentation Index
 
+- **[Product Requirements Document (PRD v2.3)](docs/PRD_v2.3.md)** — Authoritative normative product specification baseline.
+- **[Implementation Traceability Matrix](docs/IMPLEMENTATION_TRACEABILITY.md)** — Requirement-by-requirement verification status for v1.0.0.
 - **[Developer Quick Start Guide](docs/QUICK_START.md)** — Step-by-step onboarding walkthrough.
 - **[Architecture Diagrams](docs/ARCHITECTURE_DIAGRAMS.md)** — Detailed Mermaid specifications and sequence charts.
 - **[System Architecture](docs/SYSTEM_ARCHITECTURE.md)** — Hardened architectural specification.

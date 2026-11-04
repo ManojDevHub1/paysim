@@ -1,22 +1,29 @@
-# PAYSIM — Product Requirements Document
+# PAYSIM — Product Requirements Document (v2.2.0 — ARCHIVED / SUPERSEDED)
 
-**Document version:** 2.2.0  
-**Status:** Implementation baseline — v2.2 normative contracts locked; implementation and tests not yet executed  
-**Document owner:** PAYSIM Project  
-**Product category:** Local-first payment workflow simulator and webhook testing tool  
-**Primary audience:** MERN, Node.js, React, and full-stack developers; students learning payment integrations  
-**Default mode:** Local-only simulation; no real payment processing  
-**Currency scope for MVP:** INR only  
-**Storage for MVP:** In-memory session storage; no database  
-**Target operating systems:** Windows 11, macOS, and mainstream Linux distributions  
-**Runtime target:** Node.js 24.x (Maintenance LTS) and 26.x (Active LTS) as of 3 November 2026; test both supported lines and use current security patches  
+> [!WARNING]
+> **ARCHIVED & SUPERSEDED SPECIFICATION**
+> This document specifies **PRD v2.2.0 (Historical)** and is **ARCHIVED and SUPERSEDED**.
+> The authoritative normative specification for PAYSIM is **[PRD v2.3.0](PRD_v2.3.md)**.
+> This file is preserved strictly as an immutable historical record of the v2.2 architecture baseline. Do not use this document as a current normative reference.
+
+**Document version:** 2.2.0 (ARCHIVED / SUPERSEDED by [PRD v2.3.0](PRD_v2.3.md))
+**Status:** ARCHIVED — Historical Baseline (Superseded by PRD v2.3.0 / `docs/PRD_v2.3.md`)
+**Successor Specification:** [PRD v2.3.0 (`docs/PRD_v2.3.md`)](PRD_v2.3.md)
+**Document owner:** PAYSIM Project
+**Product category:** Local-first payment workflow simulator and webhook testing tool
+**Primary audience:** MERN, Node.js, React, and full-stack developers; students learning payment integrations
+**Default mode:** Local-only simulation; no real payment processing
+**Currency scope for MVP:** INR only
+**Storage for MVP:** In-memory session storage; no database
+**Target operating systems:** Windows 11, macOS, and mainstream Linux distributions
+**Runtime target:** Node.js 24.x (Maintenance LTS) and 26.x (Active LTS) as of 3 November 2026; test both supported lines and use current security patches
 **Last updated:** 3 November 2026
 
 ---
 
 ## Document Purpose and Status
 
-This document is the single source of truth for the PAYSIM MVP. PRD v1.0, v2.0, and v2.1 are retained as immutable archives. Version 2.2 resolves the follow-up audit findings around control-session exchange, compatibility checkout-session creation, secret-version retention, endpoint delivery mode, canonical-event serialization, payment/session expiry, event ordering, delivery result classification, bounded retention, and fixture traceability. The requirements below are normative. A passing document review is not evidence that implementation or automated tests have been completed.
+This document represents the historical PRD v2.2.0 specification baseline. It has been superseded by **[PRD v2.3.0](PRD_v2.3.md)**, which serves as the authoritative normative specification for PAYSIM. This file is retained as an immutable historical archive for project provenance and audit traceability. PRD v1.0, v2.0, and v2.1 are similarly retained as historical archives. Version 2.2 resolved earlier audit findings; subsequent Phase 02.1 technical audit findings, iframe dual-authentication, and loopback confinement were finalized in **[PRD v2.3.0](PRD_v2.3.md)**. The requirements below are historical. For the realized implementation status in PAYSIM v1.0.0, refer to the [Implementation Traceability Document](IMPLEMENTATION_TRACEABILITY.md).
 
 The design deliberately combines two integration surfaces:
 

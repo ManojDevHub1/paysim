@@ -1,7 +1,13 @@
-# PAYSIM PRD v2.2.0 — Validation Report
+# PAYSIM PRD v2.2.0 — Validation Report (ARCHIVED)
 
-**Date:** 3 November 2026  
-**Scope:** Documentation and fixture consistency only; no application implementation was executed.
+> [!WARNING]
+> **ARCHIVED HISTORICAL REPORT**
+> This validation report documents pre-implementation documentation and fixture consistency checks for the historical PRD v2.2.0 baseline.
+> For the active implementation traceability and verified release test suite results in PAYSIM v1.0.0, refer to **[IMPLEMENTATION_TRACEABILITY.md](IMPLEMENTATION_TRACEABILITY.md)**.
+
+**Date:** 3 November 2026
+**Status:** ARCHIVED — Historical Pre-Implementation Validation Report (PRD v2.2.0 baseline)
+**Scope:** Historical documentation and fixture consistency only; evaluated before Phase 03 engineering.
 
 ## Checks performed
 

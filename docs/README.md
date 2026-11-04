@@ -60,7 +60,8 @@ This directory contains the normative specifications, system architecture, decis
 
 ## Authoritative Normative Baseline (Phase 02 Architecture Final Closure)
 
-- [`PRD_v2.3.md`](PRD_v2.3.md) — **Current Normative Product Requirements Document (v2.3.0 baseline)**. Authoritative specification governing all implementation phases.
+- [`PRD_v2.3.md`](PRD_v2.3.md) — **Authoritative Normative Product Requirements Document (v2.3.0 baseline)**. The definitive specification governing all implementation phases and release gates.
+- [`IMPLEMENTATION_TRACEABILITY.md`](IMPLEMENTATION_TRACEABILITY.md) — **PAYSIM v1.0.0 Implementation Traceability Matrix**. Requirement-by-requirement audit distinguishing implemented & verified, partially implemented, not verified, and deferred capabilities.
 - [`FINAL_IMPLEMENTATION_READINESS.md`](FINAL_IMPLEMENTATION_READINESS.md) — **Final Implementation Readiness & Engineering Seal**. Definitive architectural sign-off certifying complete architecture closure, single root state pointer swap, deadlock-free concurrency, and Phase 03 readiness.
 - [`PHASE_02_6_ENGINEERING_INTEGRITY_AUDIT.md`](PHASE_02_6_ENGINEERING_INTEGRITY_AUDIT.md) — **Phase 02.6 Engineering Integrity Audit & Hardening Specification**. Specifications for immutable root state pointer swap, SessionTokenVault grace rotation, BigInt event sequencing, same-tier lexicographical locking, and delivery order contracts.
 - [`PHASE_02_6_VALIDATION_REPORT.md`](PHASE_02_6_VALIDATION_REPORT.md) — **Phase 02.6 Validation Report**. Verification matrix auditing all Phase 02.6 engineering integrity resolutions.
@@ -91,13 +92,14 @@ This directory contains the normative specifications, system architecture, decis
 
 ## Historical Archives (Immutable)
 
-- `PRD.md` — Immutable v2.2.0 specification baseline.
-- `PRD_v2.2_CHANGELOG.md` — Changelog for v2.2.0.
-- `PRD_v2.2_RESOLUTION_REGISTER.md` — Traceability register for v2.2.0.
-- `PRD_v2.2_VALIDATION_REPORT.md` — Validation report for v2.2.0.
+- [`PRD.md`](PRD.md) — Historical PRD v2.2.0 specification baseline (Archived / Superseded by PRD v2.3.0).
+- [`PRD_v2.2_CHANGELOG.md`](PRD_v2.2_CHANGELOG.md) — Historical changelog for PRD v2.2.0.
+- [`PRD_v2.2_RESOLUTION_REGISTER.md`](PRD_v2.2_RESOLUTION_REGISTER.md) — Historical resolution register for PRD v2.2.0.
+- [`PRD_v2.2_VALIDATION_REPORT.md`](PRD_v2.2_VALIDATION_REPORT.md) — Historical pre-implementation validation report for PRD v2.2.0.
+- [`archive/`](archive/) — Legacy historical artifacts archive ([`archive/PRD-2.md`](archive/PRD-2.md), [`archive/README-1.md`](archive/README-1.md)).
 - `PRD_v2.1_ARCHIVE.md` — Immutable v2.1 specification archive.
 - `PRD_v2.0_ARCHIVE.md` — Immutable v2.0 specification archive.
 - `PRD_v1.0_ARCHIVE.md` — Immutable v1.0 specification archive.
 
 > [!NOTE]
-> Do not combine archived requirements with the normative `PRD_v2.3.md`. Application implementation and runtime tests have not been performed as part of this documentation and architecture hardening package.
+> Do not combine archived requirements with the normative `PRD_v2.3.md`. PAYSIM v1.0.0 was implemented and verified against the PRD v2.3.0 baseline across 546 tests in 49 test files. For requirement verification details, see [`IMPLEMENTATION_TRACEABILITY.md`](IMPLEMENTATION_TRACEABILITY.md).

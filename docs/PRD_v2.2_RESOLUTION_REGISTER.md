@@ -1,7 +1,14 @@
-# PAYSIM PRD v2.2.0 — Resolution Register
+# PAYSIM PRD v2.2.0 — Resolution Register (ARCHIVED)
 
-**Date:** 3 November 2026  
-**Normative source:** `PRD.md` (version 2.2.0)
+> [!WARNING]
+> **ARCHIVED HISTORICAL REGISTER**
+> This resolution register documents issue mapping for historical PRD v2.2.0.
+> It has been superseded by the current normative **[PRD_v2.3_RESOLUTION_REGISTER.md](PRD_v2.3_RESOLUTION_REGISTER.md)**.
+
+**Date:** 3 November 2026
+**Document Status:** ARCHIVED — Historical Traceability Register for PRD v2.2.0 (Superseded by [PRD_v2.3_RESOLUTION_REGISTER.md](PRD_v2.3_RESOLUTION_REGISTER.md))
+**Historical Source:** `PRD.md` (version 2.2.0 baseline)
+**Successor Register:** [PRD_v2.3_RESOLUTION_REGISTER.md](PRD_v2.3_RESOLUTION_REGISTER.md)
 
 | ID | Prior finding | Resolution in v2.2.0 | Normative sections | Required verification |
 |---|---|---|---|---|

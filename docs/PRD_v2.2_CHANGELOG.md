@@ -1,11 +1,17 @@
-# PAYSIM PRD v2.2.0 — Changelog
+# PAYSIM PRD v2.2.0 — Changelog (ARCHIVED)
 
-**Date:** 3 November 2026  
-**Status:** Normative product specification; implementation and runtime tests have not been performed.
+> [!WARNING]
+> **ARCHIVED HISTORICAL CHANGELOG**
+> This changelog documents changes introduced by the historical PRD v2.2.0 baseline.
+> It has been superseded by the current normative **[PRD v2.3.0](PRD_v2.3.md)** and **[PRD_v2.3_CHANGELOG.md](PRD_v2.3_CHANGELOG.md)**.
+
+**Date:** 3 November 2026
+**Status:** ARCHIVED — Historical Changelog for PRD v2.2.0 (Superseded by [PRD_v2.3_CHANGELOG.md](PRD_v2.3_CHANGELOG.md))
+**Successor Changelog:** [PRD_v2.3_CHANGELOG.md](PRD_v2.3_CHANGELOG.md)
 
 ## Purpose
 
-Version 2.2.0 closes the follow-up audit gaps discovered after PRD v2.1.0. It preserves the previous documents as immutable archives and makes v2.2.0 the sole normative specification.
+This historical document records the changes introduced in PRD v2.2.0. Note that PRD v2.2.0 was subsequently superseded by PRD v2.3.0. For the active specification changelog, see [PRD_v2.3_CHANGELOG.md](PRD_v2.3_CHANGELOG.md).
 
 ## Changes
 

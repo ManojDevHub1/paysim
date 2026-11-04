@@ -1,15 +1,22 @@
-# PAYSIM — Product Requirements Document
+# PAYSIM — Product Requirements Document (Historical PRD-2.md Archive)
 
-**Document version:** 2.2.0  
-**Status:** Implementation baseline — v2.2 normative contracts locked; implementation and tests not yet executed  
-**Document owner:** PAYSIM Project  
-**Product category:** Local-first payment workflow simulator and webhook testing tool  
-**Primary audience:** MERN, Node.js, React, and full-stack developers; students learning payment integrations  
-**Default mode:** Local-only simulation; no real payment processing  
-**Currency scope for MVP:** INR only  
-**Storage for MVP:** In-memory session storage; no database  
-**Target operating systems:** Windows 11, macOS, and mainstream Linux distributions  
-**Runtime target:** Node.js 24.x (Maintenance LTS) and 26.x (Active LTS) as of 3 November 2026; test both supported lines and use current security patches  
+> [!WARNING]
+> **ARCHIVED HISTORICAL FILE**
+> This file is a historical legacy root duplicate of the PRD v2.2.0 baseline.
+> It has been archived and superseded by the canonical normative specification at **[docs/PRD_v2.3.md](../PRD_v2.3.md)**.
+> For canonical archived v2.2 documentation, see **[docs/PRD.md](../PRD.md)**.
+
+**Document version:** 2.2.0 (ARCHIVED / SUPERSEDED by [PRD v2.3](../PRD_v2.3.md))
+**Status:** ARCHIVED — Historical duplicate from repository root; superseded by PRD v2.3.0
+**Successor Specification:** [docs/PRD_v2.3.md](../PRD_v2.3.md)
+**Document owner:** PAYSIM Project
+**Product category:** Local-first payment workflow simulator and webhook testing tool
+**Primary audience:** MERN, Node.js, React, and full-stack developers; students learning payment integrations
+**Default mode:** Local-only simulation; no real payment processing
+**Currency scope for MVP:** INR only
+**Storage for MVP:** In-memory session storage; no database
+**Target operating systems:** Windows 11, macOS, and mainstream Linux distributions
+**Runtime target:** Node.js 24.x (Maintenance LTS) and 26.x (Active LTS) as of 3 November 2026; test both supported lines and use current security patches
 **Last updated:** 3 November 2026
 
 ---

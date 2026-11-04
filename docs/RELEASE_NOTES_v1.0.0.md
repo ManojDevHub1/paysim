@@ -94,7 +94,7 @@ With PAYSIM, you can simulate realistic payment state transitions, test embedded
 
 ## 📄 License & Legal Notice
 
-PAYSIM is licensed under the [MIT License](LICENSE).
+PAYSIM is licensed under the [MIT License](../LICENSE).
 
 ```text
 Copyright (c) 2026 PAYSIM Contributors
