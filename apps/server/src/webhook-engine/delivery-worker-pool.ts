@@ -73,6 +73,7 @@ export class DeliveryWorkerPool {
   private isRunning = false;
   private activeWorkers = 0;
   private readonly deliveryTimers = new Map<string, unknown>();
+  private safetyTimer: unknown = null;
   private readonly wakeResolvers: Array<() => void> = [];
   private abortController: AbortController | null = null;
   private workerPromises: Promise<void>[] = [];
@@ -103,6 +104,12 @@ export class DeliveryWorkerPool {
     for (let i = 0; i < this.concurrency; i++) {
       this.workerPromises.push(this.runWorkerLoop(i));
     }
+
+    // Restore any pending/overdue retries from RootState on startup
+    this.reconcileRetryTimers();
+
+    // Start periodic safety reconciliation
+    this.scheduleSafetyReconciliation();
   }
 
   /**
@@ -142,6 +149,12 @@ export class DeliveryWorkerPool {
 
     // Wake all waiting workers so they observe isRunning === false and exit
     this.notifyJobAvailable();
+
+    // Cancel safety reconciliation timer
+    if (this.safetyTimer) {
+      clearTimeout(this.safetyTimer as NodeJS.Timeout);
+      this.safetyTimer = null;
+    }
 
     // Clear all scheduled retry timers
     for (const timer of this.deliveryTimers.values()) {
@@ -186,6 +199,13 @@ export class DeliveryWorkerPool {
   }
 
   /**
+   * Returns the count of actively scheduled retry timers in the worker pool registry.
+   */
+  public get scheduledRetryCount(): number {
+    return this.deliveryTimers.size;
+  }
+
+  /**
    * Continuous loop for an individual worker.
    */
   private async runWorkerLoop(workerIndex: number): Promise<void> {
@@ -194,6 +214,7 @@ export class DeliveryWorkerPool {
       if (!job) {
         // Queue is empty: attempt to refill from eligible RootState pending deliveries
         this.refillQueue?.();
+        this.reconcileRetryTimers();
         // Wait for a job notification or safety timeout
         await this.waitForJob(500);
         continue;
@@ -355,7 +376,6 @@ export class DeliveryWorkerPool {
           }
 
           const timer = this.clock.setTimeout(() => {
-            this.deliveryTimers.delete(deliveryId);
             this.scheduleRetryExecution(deliveryId);
           }, retryEval.delayMs);
           this.deliveryTimers.set(deliveryId, timer);
@@ -451,9 +471,55 @@ export class DeliveryWorkerPool {
   }
 
   /**
-   * Schedules a delivery for retry execution: updates status to 'pending' and enqueues.
+   * Periodically reconciles retry timers to ensure no deliveries in RootState are orphaned.
+   * Uses real event-loop timer (similar to waitForJob) so fake domain clocks are not polluted.
    */
-  private async scheduleRetryExecution(deliveryId: string): Promise<void> {
+  private scheduleSafetyReconciliation(): void {
+    if (!this.isRunning) return;
+    this.safetyTimer = setTimeout(() => {
+      if (!this.isRunning) return;
+      this.reconcileRetryTimers();
+      this.scheduleSafetyReconciliation();
+    }, 1000);
+    if (typeof (this.safetyTimer as { unref?: () => void })?.unref === 'function') {
+      (this.safetyTimer as { unref: () => void }).unref();
+    }
+  }
+
+  /**
+   * Reconciles retry timers for any deliveries in RootState that are in 'failed' status with nextRetryAt.
+   * If nextRetryAt is due (<= now) and no timer is running, transitions to pending and enqueues.
+   * If nextRetryAt is in future and no timer is running, schedules the timer.
+   */
+  public reconcileRetryTimers(): void {
+    if (!this.isRunning) return;
+
+    const allDeliveries = this.coordinator.deliveries.list();
+    const now = this.clock.now();
+
+    for (const d of allDeliveries) {
+      if (d.status === 'failed' && d.nextRetryAt) {
+        if (!this.deliveryTimers.has(d.id)) {
+          const dueTime = Date.parse(d.nextRetryAt);
+          if (dueTime <= now) {
+            this.scheduleRetryExecution(d.id);
+          } else {
+            const remainingMs = Math.max(1, Math.ceil(dueTime - now));
+            const timer = this.clock.setTimeout(() => {
+              this.scheduleRetryExecution(d.id);
+            }, remainingMs);
+            this.deliveryTimers.set(d.id, timer);
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Schedules a delivery for retry execution: updates status to 'pending' and enqueues.
+   * Strictly enforces that dispatch never occurs before the persisted nextRetryAt deadline.
+   */
+  public async scheduleRetryExecution(deliveryId: string): Promise<void> {
     if (!this.isRunning) return;
 
     try {
@@ -461,30 +527,55 @@ export class DeliveryWorkerPool {
       const locks = [`delivery:${deliveryId}`];
       await this.coordinator.transaction({ locks }, async (ctx) => {
         const current = ctx.deliveries.get(deliveryId);
-        if (!current) return;
+        if (!current) {
+          this.deliveryTimers.delete(deliveryId);
+          return;
+        }
 
-        // If it's still in failed status with scheduled retry, transition to pending
+        // If it's still in failed status with scheduled retry, check deadline
         if (current.status === 'failed') {
-          // Verify that nextRetryAt is actually due (not superseded or rescheduled into future)
-          if (current.nextRetryAt && Date.parse(current.nextRetryAt) > this.clock.now()) {
+          const now = this.clock.now();
+          const dueTime = current.nextRetryAt ? Date.parse(current.nextRetryAt) : 0;
+
+          // Strict deadline check: If deadline is still in future (dueTime > now),
+          // NEVER dispatch early. Reschedule for remaining duration.
+          if (dueTime > now) {
+            if (this.isRunning) {
+              const remainingMs = Math.max(1, Math.ceil(dueTime - now));
+              const timer = this.clock.setTimeout(() => {
+                this.scheduleRetryExecution(deliveryId);
+              }, remainingMs);
+              this.deliveryTimers.set(deliveryId, timer);
+            }
             return;
           }
+
+          // Deadline reached (now >= dueTime): clean up timer registry entry
+          this.deliveryTimers.delete(deliveryId);
 
           const updated: WebhookDeliveryEntity = {
             ...current,
             status: 'pending',
             nextRetryAt: null,
-            updatedAt: new Date(this.clock.now()).toISOString(),
+            updatedAt: new Date(now).toISOString(),
           };
           ctx.deliveries.update(updated);
           shouldEnqueue = true;
+        } else {
+          // Status is no longer 'failed' (e.g. cancelled by manual retry or terminated)
+          this.deliveryTimers.delete(deliveryId);
         }
       });
 
       if (shouldEnqueue) {
         // Enqueue to worker queue
-        this.queue.enqueue(deliveryId, this.clock.now());
-        this.notifyJobAvailable();
+        try {
+          this.queue.enqueue(deliveryId, this.clock.now());
+          this.notifyJobAvailable();
+        } catch {
+          // If queue is full, delivery remains in 'pending' status in RootState,
+          // and will be enqueued by reconcilePendingDeliveries() when a worker frees capacity.
+        }
       }
     } catch (err) {
       console.error(`[WorkerPool] Error scheduling retry execution for ${deliveryId}:`, err);

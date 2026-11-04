@@ -68,7 +68,7 @@ flowchart TD
   WorkerPool --> SecretVault
   WorkerPool --> BodyVault
 
-  HttpDispatcher -->|POST Strict Loopback Only (127.0.0.1:[1024-65535])| Receiver
+  HttpDispatcher --> NET["POST Strict Loopback Only (127.0.0.1, ports 1024–65535)"] --> Receiver
   Receiver -->|Process & Acknowledge| DeveloperApp
 ```
 
@@ -132,7 +132,7 @@ sequenceDiagram
   Queue->>Worker: Dequeue available job
   Worker->>Vault: Retrieve Body Snapshot & Signing Secret
   Worker->>Worker: Generate HMAC-SHA256 Signature (Native / Compat)
-  Worker->>Dispatcher: Validate destination (127.0.0.1:[1024-65535])
+  Worker->>Dispatcher: Validate destination (127.0.0.1, ports 1024–65535)
 
   alt Valid Loopback Destination
     Dispatcher->>Receiver: HTTP POST with X-PaySim-Signature
@@ -157,47 +157,47 @@ flowchart TD
   Start["Event Committed\nJob Enqueued (status: pending)"] --> Dequeue["Worker Pool Dequeues Job\nStatus: in_progress"]
   Dequeue --> Attempt1["Attempt 1: Immediate Dispatch (0ms delay)"]
 
-  Attempt1 -->|HTTP 2xx (Success)| Success["Status: succeeded"]
+  Attempt1 -->|"HTTP 2xx (Success)"| Success["Status: succeeded"]
   Success --> Cleanup["Vault Cleanup:\nRelease DeliveryBodyVault Snapshot\nRelease Secret Reference"]
 
-  Attempt1 -->|Permanent Reject\n(Redirect, Prohibited Port, Body > 64KB)| Rejected["Status: rejected\n(Non-retryable terminal state)"]
+  Attempt1 -->|"Permanent Reject (Redirect, Prohibited Port, Body > 64KB)"| Rejected["Status: rejected\n(Non-retryable terminal state)"]
   Rejected --> Cleanup
 
-  Attempt1 -->|Non-Retryable 4xx\n(400, 401, 403, 404, 422)| FailedNoRetry["Status: failed\n(Zero automatic retries scheduled)"]
-  Attempt1 -->|Process Shutdown Abort| Interrupted["Status: interrupted\n(Zero automatic retries)"]
+  Attempt1 -->|"Non-Retryable 4xx (400, 401, 403, 404, 422)"| FailedNoRetry["Status: failed\n(Zero automatic retries scheduled)"]
+  Attempt1 -->|"Process Shutdown Abort"| Interrupted["Status: interrupted\n(Zero automatic retries)"]
 
-  Attempt1 -->|Retryable Error\n(Network Error, 408, 425, 429, 5xx)| EvalAuto1{"Automatic Attempts < 3?"}
+  Attempt1 -->|"Retryable Error (Network Error, 408, 425, 429, 5xx)"| EvalAuto1{"Automatic Attempts < 3?"}
 
-  EvalAuto1 -->|Yes: Attempt 1 Failed| Backoff1["Fixed Delay 1 (500ms Backoff)\nStatus: failed, nextRetryAt: future"]
+  EvalAuto1 -->|"Yes: Attempt 1 Failed"| Backoff1["Fixed Delay 1 (500ms Backoff)\nStatus: failed, nextRetryAt: future"]
   Backoff1 --> Attempt2["Attempt 2 Dispatch (Worker Pool)"]
 
-  Attempt2 -->|HTTP 2xx| Success
-  Attempt2 -->|Non-Retryable 4xx| FailedNoRetry
-  Attempt2 -->|Permanent Reject| Rejected
-  Attempt2 -->|Retryable Error| EvalAuto2{"Automatic Attempts < 3?"}
+  Attempt2 -->|"HTTP 2xx"| Success
+  Attempt2 -->|"Non-Retryable 4xx"| FailedNoRetry
+  Attempt2 -->|"Permanent Reject"| Rejected
+  Attempt2 -->|"Retryable Error"| EvalAuto2{"Automatic Attempts < 3?"}
 
-  EvalAuto2 -->|Yes: Attempt 2 Failed| Backoff2["Fixed Delay 2 (2000ms Backoff)\nStatus: failed, nextRetryAt: future"]
+  EvalAuto2 -->|"Yes: Attempt 2 Failed"| Backoff2["Fixed Delay 2 (2000ms Backoff)\nStatus: failed, nextRetryAt: future"]
   Backoff2 --> Attempt3["Attempt 3 Dispatch (Worker Pool)"]
 
-  Attempt3 -->|HTTP 2xx| Success
-  Attempt3 -->|Non-Retryable 4xx| FailedNoRetry
-  Attempt3 -->|Permanent Reject| Rejected
-  Attempt3 -->|Failed: 3 Attempts Exhausted| Exhausted["Status: exhausted\nAutomatic Retries Complete"]
+  Attempt3 -->|"HTTP 2xx"| Success
+  Attempt3 -->|"Non-Retryable 4xx"| FailedNoRetry
+  Attempt3 -->|"Permanent Reject"| Rejected
+  Attempt3 -->|"Failed: 3 Attempts Exhausted"| Exhausted["Status: exhausted\nAutomatic Retries Complete"]
 
-  Backoff1 -.->|User Triggers Manual Retry| ManualSupersede["Cancel Scheduled Timer\nConsume 1 of 3 Manual Quotas"]
-  Backoff2 -.->|User Triggers Manual Retry| ManualSupersede
+  Backoff1 -.->|"User Triggers Manual Retry"| ManualSupersede["Cancel Scheduled Timer\nConsume 1 of 3 Manual Quotas"]
+  Backoff2 -.->|"User Triggers Manual Retry"| ManualSupersede
   ManualSupersede --> ManualDispatch["Immediate Manual Dispatch\n(Single Attempt, No Auto Cycle)"]
-  ManualDispatch -->|HTTP 2xx| Success
-  ManualDispatch -->|Failed| FailedManual["Status: failed\n(Manual retries do not restart auto cycle)"]
+  ManualDispatch -->|"HTTP 2xx"| Success
+  ManualDispatch -->|"Failed"| FailedManual["Status: failed\n(Manual retries do not restart auto cycle)"]
 
   FailedNoRetry --> EvalManual{"Manual Retries Remaining?\n(Max 3 Manual Retries)"}
   Exhausted --> EvalManual
   FailedManual --> EvalManual
 
-  EvalManual -->|Quota Available| ManualRetryReady["Manual Retry Permitted via UI / API"]
-  ManualRetryReady -->|Triggered by User| ManualDispatch
+  EvalManual -->|"Quota Available"| ManualRetryReady["Manual Retry Permitted via UI / API"]
+  ManualRetryReady -->|"Triggered by User"| ManualDispatch
 
-  EvalManual -->|All Manual Retries Consumed| PermanentExhaustion["Permanently Exhausted\n(Retries Remaining: 0)"]
+  EvalManual -->|"All Manual Retries Consumed"| PermanentExhaustion["Permanently Exhausted\n(Retries Remaining: 0)"]
   PermanentExhaustion --> CleanupZeroize["Memory Zeroization:\nScrub Secret with 0x00 in WebhookSecretVault\nRelease DeliveryBodyVault Snapshot"]
 ```
 

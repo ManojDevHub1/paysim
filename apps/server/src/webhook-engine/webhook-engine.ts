@@ -127,6 +127,10 @@ export class WebhookEngine {
     return this.isStarted;
   }
 
+  public get isRunning(): boolean {
+    return this.isStarted;
+  }
+
   /**
    * Cancels any scheduled automatic retry timer for a delivery (e.g. when superseded by manual retry).
    */
@@ -139,6 +143,13 @@ export class WebhookEngine {
    */
   public hasScheduledRetry(deliveryId: string): boolean {
     return this.workerPool.hasScheduledRetry(deliveryId);
+  }
+
+  /**
+   * Returns the count of actively scheduled retry timers in the worker pool registry.
+   */
+  public get scheduledRetryCount(): number {
+    return this.workerPool.scheduledRetryCount;
   }
 
   /**
@@ -164,6 +175,8 @@ export class WebhookEngine {
    * Refills the queue up to its available capacity with due, unqueued pending deliveries.
    */
   public reconcilePendingDeliveries(): number {
+    this.workerPool.reconcileRetryTimers();
+
     const availableCapacity = this.queue.capacity - this.queue.size;
     if (availableCapacity <= 0) {
       return 0;

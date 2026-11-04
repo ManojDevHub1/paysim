@@ -130,7 +130,7 @@ flowchart TD
   StorageLayer --> Queue
   Queue --> WorkerPool
   WorkerPool --> Dispatcher
-  Dispatcher -->|Loopback HTTP POST (127.0.0.1:[1024-65535])| Receiver
+  Dispatcher --> NET["Loopback HTTP POST (127.0.0.1, ports 1024–65535)"] --> Receiver
 ```
 
 For comprehensive lifecycle sequence charts and retry state machines, see **[Architecture Diagrams](docs/ARCHITECTURE_DIAGRAMS.md)**.
