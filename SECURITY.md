@@ -37,11 +37,12 @@ We take the security of PAYSIM and the developer environments that run it seriou
 
 If you discover a security vulnerability, please report it responsibly:
 
-1. **Do not create a public GitHub issue.**
-2. Report the vulnerability privately via **GitHub Private Vulnerability Reporting**:
+1. **Do not create a public GitHub issue with vulnerability details.**
+2. Check if **GitHub Private Vulnerability Reporting** is enabled for this repository:
    - Navigate to the **Security** tab of this repository on GitHub.
-   - Click on **Report a vulnerability** to open an advisory draft.
-3. If Private Vulnerability Reporting is unavailable, contact the repository maintainers through official repository administrative channels.
+   - If enabled, click on **Report a vulnerability** to open a confidential security advisory draft.
+3. If Private Vulnerability Reporting is disabled or unavailable:
+   - Contact the repository maintainers privately via their GitHub profile contact options, or open a minimal issue requesting private security contact details without disclosing any vulnerability information.
 
 ### What to Include in Your Report
 

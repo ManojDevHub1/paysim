@@ -7,13 +7,13 @@
 [![Node.js Version](https://img.shields.io/badge/Node.js-%3E%3D24.0.0-brightgreen.svg)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Test Suite](https://img.shields.io/badge/Tests-541%20passing-success.svg)](https://vitest.dev/)
+[![Test Suite](https://img.shields.io/badge/Tests-546%20passing-success.svg)](https://vitest.dev/)
 [![Status](https://img.shields.io/badge/Release-v1.0.0--ready-orange.svg)](docs/RELEASE_NOTES_v1.0.0.md)
 
 <p align="center">
-  A local-first, zero-dependency payment gateway simulator and developer laboratory.<br />
-  Test payment lifecycles, simulate success/failure scenarios, and receive authentic HMAC-signed webhooks on localhost.<br />
-  <b>Zero KYC. Zero external accounts. Zero cloud reverse tunnels. Zero databases.</b>
+  A local-first payment gateway simulator and developer testing laboratory with zero external service dependencies.<br />
+  Test payment lifecycles, simulate success/failure scenarios, and receive authentic HMAC-signed webhooks through the local loopback interface.<br />
+  <b>Zero merchant accounts or KYC required (local-only simulation). No external payment APIs. Zero cloud reverse tunnels. Zero databases.</b>
 </p>
 
 [Quick Start](#-quick-start) •
@@ -29,7 +29,9 @@
 
 > [!IMPORTANT]
 > **Project Limitations & Simulation Boundary**
-> PAYSIM is strictly an **offline simulation and developer testing laboratory**. It **does not** process real money, interact with real banking switches, connect to payment card networks (Visa/Mastercard), or communicate with UPI PSPs. All orders, payments, tokens, and credentials are completely synthetic and maintained exclusively in volatile in-memory storage.
+> PAYSIM is strictly a **local-only payment simulation and webhook testing laboratory**. It **does not** process real money, interact with real banking switches, connect to payment card networks (Visa/Mastercard), or communicate with UPI PSPs. All orders, payments, tokens, and credentials are completely synthetic and maintained exclusively in volatile in-memory storage.
+>
+> The phrase **"zero KYC"** denotes that developers do not need merchant onboarding or banking identity verification to test application workflows locally. PAYSIM does not provide financial services, process real transactions, or onboard real merchants, and it must never be used or presented as a way to bypass financial regulations, provider onboarding, identity checks, or production payment requirements.
 
 ---
 
@@ -42,14 +44,14 @@ Integrating payment gateways during local development is notoriously painful:
 - **Unreliable Edge-Case Testing**: Testing issuer declines, network timeouts, payment cancellations, or webhook retry exhaustion against real gateways is difficult or non-deterministic.
 - **Database Pollution**: Local development environments get cluttered with test transactions, orphaned payment states, and expired credentials.
 
-**PAYSIM eliminates this entirely.** It runs an entire payment gateway simulator directly on your loopback interface (`127.0.0.1`). You can create orders, simulate payment attempts, test embedded checkout flows, and receive real HTTP webhooks with cryptographic HMAC-SHA256 signatures — all on localhost.
+**PAYSIM eliminates this entirely.** It runs an entire payment gateway simulator directly on your loopback interface (`127.0.0.1`). You can create orders, simulate payment attempts, test embedded checkout flows, and receive real HTTP webhooks with cryptographic HMAC-SHA256 signatures — delivered strictly over literal loopback (`127.0.0.1` or `[::1]`).
 
 ---
 
 ## ⚡ Key Features
 
 - **100% Local & Self-Contained**: Binds strictly to `127.0.0.1`. Performs zero outbound external internet requests and requires zero database servers.
-- **Real Loopback Webhook Dispatches**: Sends authentic HTTP `POST` requests to local receiver endpoints (e.g., `http://127.0.0.1:9001/webhook`) with timing-safe HMAC-SHA256 signatures (`X-PaySim-Signature`).
+- **Real Loopback Webhook Dispatches**: Sends authentic HTTP `POST` requests to local receiver endpoints via literal loopback addresses (e.g., `http://127.0.0.1:9001/webhook` or `http://[::1]:9001/webhook`; DNS hostnames including `localhost` are strictly rejected for SSRF safety) with timing-safe HMAC-SHA256 signatures (`X-PaySim-Signature`).
 - **Deterministic Simulation Lab**: Simulate any payment outcome on demand: `success`, `failed`, `pending`, or `cancelled` with specific simulated error codes (e.g., `CARD_DECLINED`, `INSUFFICIENT_FUNDS`).
 - **Dual Wire Protocol**: Supports both native PAYSIM API formats and drop-in **Razorpay Orders & Checkout API compatibility** (`/v1/orders`, `X-Razorpay-Signature`).
 - **Interactive Developer Dashboard**: Modern React 18 + Vite developer interface with 9 views: Overview, Orders, Payments, Checkout Simulator, Webhooks, Deliveries, Events, Credentials, and Settings.
@@ -148,7 +150,7 @@ For comprehensive lifecycle sequence charts and retry state machines, see **[Arc
 | **Validation** | Zod 3.23 | Frozen contract schemas and request validation |
 | **Storage** | In-Memory (`RootState`) | Pure state machines with atomic commit coordination |
 | **Security** | Native `node:crypto` | Constant-time HMAC-SHA256 & memory zeroization |
-| **Testing** | Vitest 2.1 | Fast parallel test runner (541 passing tests) |
+| **Testing** | Vitest 2.1 | Fast parallel test runner (546 passing tests across 49 test files) |
 
 ---
 
@@ -242,7 +244,7 @@ Ready-to-use HTTP request files are provided in `examples/api/`:
 
 ## 🔒 Security Architecture
 
-- **Strict Loopback Confinement**: Outbound webhook dispatches are strictly restricted to `127.0.0.1` and `[::1]` on ports `1024` through `65535`. Dispatches to public IPs, cloud metadata endpoints (`169.254.169.254`), broadcast addresses, or the server's own listener ports are rejected at socket initiation.
+- **Strict Loopback Confinement**: Outbound webhook dispatches are strictly restricted to literal loopback addresses (`127.0.0.1` and `[::1]`) on ports `1024` through `65535`. DNS hostnames (including `localhost`), alternate numeric IP notations, LAN ranges, cloud metadata endpoints (`169.254.169.254`), broadcast addresses, and the server's own listener ports are strictly rejected at socket initiation.
 - **In-Memory Cryptographic Vaults**: Webhook signing secrets and delivery payload snapshots are isolated in dedicated memory vaults (`WebhookSecretVault`, `DeliveryBodyVault`). Secrets are scrubbed with zeroes (`0x00`) upon delivery exhaustion.
 - **Zero Local Secrets Persistence**: The one-time bootstrap token is generated in volatile RAM and disclosed strictly via terminal stdout (SET-02/SET-03). It is never written to disk, dotfiles, or browser storage.
 - **Contract Sanitization**: Public delivery API endpoints sanitize responses through `WebhookDeliveryEntitySchema` to prevent leaking internal scheduler or attempt metadata.
@@ -265,7 +267,7 @@ npm run typecheck
 # Run ESLint static analysis
 npm run lint
 
-# Execute full Vitest suite (541 tests across 48 suites)
+# Execute full Vitest suite (546 passing tests across 49 test files)
 npm test
 
 # Verify production build
