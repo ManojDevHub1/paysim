@@ -2,7 +2,7 @@
 
 Welcome to **PAYSIM** — the local-first payment gateway simulator and webhook testing laboratory.
 
-This guide walks you through the entire developer journey in 12 simple steps: from cloning the repository to creating orders, simulating payment transitions, receiving real webhooks on localhost, and verifying cryptographic HMAC-SHA256 signatures.
+This guide walks you through the entire developer journey in 12 simple steps: from cloning the repository to creating orders, simulating payment transitions, receiving authentic HMAC-signed webhooks through the local loopback interface, and verifying cryptographic HMAC-SHA256 signatures.
 
 ---
 
@@ -20,7 +20,7 @@ This guide walks you through the entire developer journey in 12 simple steps: fr
 Clone the repository and install all workspace packages:
 
 ```bash
-git clone https://github.com/your-org/paysim.git
+git clone https://github.com/ManojDevHub1/paysim.git
 cd paysim
 npm install
 ```

@@ -4,7 +4,7 @@ This directory contains the normative specifications, system architecture, decis
 
 ## Developer Guides & Quick Start
 
-- [`QUICK_START.md`](QUICK_START.md) — **PAYSIM Developer Quick Start Guide**. 12-step onboarding tutorial from repository cloning to order creation, simulation, localhost webhook delivery, and HMAC-SHA256 signature verification.
+- [`QUICK_START.md`](QUICK_START.md) — **PAYSIM Developer Quick Start Guide**. 12-step onboarding tutorial from repository cloning to order creation, simulation, local loopback webhook delivery, and HMAC-SHA256 signature verification.
 - [`ARCHITECTURE_DIAGRAMS.md`](ARCHITECTURE_DIAGRAMS.md) — **PAYSIM Architectural Diagrams**. Comprehensive Mermaid diagrams detailing overall architecture, payment simulation lifecycle, webhook delivery, retry & secret retention, and package dependency graph.
 - [`DEMO_STORYBOARD.md`](DEMO_STORYBOARD.md) — **Product Demonstration Storyboard**. Step-by-step 60–90 second demonstration script illustrating order creation, payment simulation, real webhook dispatch, and HMAC verification.
 - [`BRAND_ASSETS.md`](BRAND_ASSETS.md) — **Brand Assets & Visual Identity Specification**. Design tokens, master vector SVG, and multi-resolution Microsoft ICO container specifications.

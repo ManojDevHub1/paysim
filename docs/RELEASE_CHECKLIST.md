@@ -25,7 +25,7 @@ npm run lint
 
 # 4. Execute the complete automated test suite
 npm test
-# Requirement: All 541 tests pass across 48 suites
+# Requirement: All 546 tests pass across 49 test files
 
 # 5. Verify production bundle compilation
 npm run build
@@ -46,14 +46,14 @@ Ensure that the core architectural boundaries have remained strictly uncompromis
   *Acceptance Criteria:* Diff must be 100% empty (0 lines modified).
 - [ ] **No Secret Leaks**: Ensure no `.env`, `.env.local`, or secret tokens exist in the repository.
 - [ ] **No Orphan Background Processes**: Verify ports `8787` and `5173` are released.
-- [ ] **Loopback Confinement**: Outbound HTTP sockets strictly restricted to `127.0.0.1:[1024-65535]`.
+- [ ] **Loopback Confinement**: Outbound HTTP sockets strictly restricted to `127.0.0.1:[1024-65535]` and `[::1]:[1024-65535]`.
 
 ---
 
 ## 3. Legal & Metadata Verification
 
 - [ ] **Approved License**: [`LICENSE`](../LICENSE) contains standard MIT License text.
-- [ ] **Copyright Notice**: Candidate notice `Copyright (c) 2026 PAYSIM Contributors` (pending explicit repository-owner confirmation).
+- [ ] **Copyright Notice**: Confirmed notice `Copyright (c) 2026 PAYSIM Contributors`.
 - [ ] **Package Manifests**: Root and all workspace packages specify `"version": "1.0.0"` and `"license": "MIT"`.
 - [ ] **No Contradictory Licenses**: Repository sources contain zero conflicting proprietary or GPL declarations.
 

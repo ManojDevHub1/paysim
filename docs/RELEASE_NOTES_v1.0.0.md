@@ -1,9 +1,9 @@
 # PAYSIM v1.0.0 Release Notes
 
 > **Initial Public Release — Local Payment Gateway Simulator & Webhook Testing Laboratory**
-> **Date:** 2026-11-03
-> **Tag / Version:** `v1.0.0` (Prepared locally; pending owner Git tag & GitHub release)
-> **License:** MIT License (Candidate Notice: `Copyright (c) 2026 PAYSIM Contributors` — pending maintainer confirmation)
+> **Date:** 2026-11-04
+> **Tag / Version:** `v1.0.0` (Official public release)
+> **License:** MIT License (`Copyright (c) 2026 PAYSIM Contributors`)
 
 ---
 
@@ -13,7 +13,7 @@ The PAYSIM team is proud to announce the initial open-source release of **PAYSIM
 
 PAYSIM is a local-first payment gateway simulator and developer laboratory designed to liberate engineering teams from the friction of third-party sandbox accounts, merchant KYC barriers, flaky reverse tunnels (e.g., ngrok), and database pollution.
 
-With PAYSIM, you can simulate realistic payment state transitions, test embedded customer checkout experiences, receive real HTTP webhooks on localhost, and verify cryptographic HMAC-SHA256 signatures — **with zero external dependencies and zero databases**.
+With PAYSIM, you can simulate realistic payment state transitions, test embedded customer checkout experiences, receive authentic HMAC-signed webhooks through the local loopback interface, and verify cryptographic HMAC-SHA256 signatures — **with zero external service dependencies and zero databases**.
 
 ---
 
@@ -27,14 +27,14 @@ With PAYSIM, you can simulate realistic payment state transitions, test embedded
 
 ### 2. Dual Wire Protocol Ingress
 - **Native PAYSIM API v1**: Complete REST API (`/api/v1/orders`, `/api/v1/payments`, `/api/v1/webhook-endpoints`, `/api/v1/deliveries`, `/api/v1/events`).
-- **Razorpay API Compatibility**: Drop-in compatible endpoints (`/v1/orders`, `/v1/checkout/embedded`) enabling teams using Razorpay SDKs to point their `baseUrl` directly to `http://127.0.0.1:8787`.
+- **Selected Razorpay API Compatibility**: Compatible endpoints (`/v1/orders`, `/v1/checkout/embedded`) enabling teams using standard Razorpay Orders and embedded Checkout SDKs to point their client `baseUrl` to `http://127.0.0.1:8787`.
 
 ### 3. Interactive Payments Simulation Lab
 - Deterministically trigger payment outcomes: `success` (instant capture), `failed` (with specific decline reason codes), `pending`, or `cancelled`.
 - Atomic state machine guarantees: Payment state transitions synchronously transition the associated Order state without race conditions.
 
 ### 4. Outbound Webhook Delivery Engine
-- **5 Concurrent Workers**: Multi-worker background delivery pool with bounded queue capacity (100 in-flight jobs).
+- **5 Concurrent Workers**: Multi-worker background delivery pool with bounded in-memory queue capacity (100 jobs); volatile in-memory queues and retry timers do not persist across process restarts.
 - **Fixed Retry Schedule**: Immediate attempt, 500ms delay, and 2,000ms delay before marked `exhausted`.
 - **Manual Retry Allowance**: Up to 3 manual delivery replays or retry triggers via the dashboard or API.
 - **Payload Immutability**: Exact raw byte preservation (`DeliveryBodyVault`) ensuring HMAC signature stability across retries.
@@ -59,7 +59,7 @@ With PAYSIM, you can simulate realistic payment state transitions, test embedded
 
 ## 🔒 Security Architecture & Guarantees
 
-- **Strict Loopback Confinement**: Outbound webhook dispatches strictly restricted to `127.0.0.1` and `[::1]` on ports `1024` through `65535`. Socket attempts to public IPs, cloud metadata (`169.254.169.254`), or active server ports are blocked.
+- **Strict Loopback Confinement**: Outbound webhook dispatches strictly restricted to literal loopback addresses (`127.0.0.1` and `[::1]`) on ports `1024` through `65535`. DNS hostnames (including `localhost`), alternate IP encodings, LAN ranges, and public IPs are strictly rejected. Socket attempts to cloud metadata (`169.254.169.254`) or active server ports are blocked.
 - **In-Memory Vault Isolation**: Webhook signing secrets and delivery payload snapshots are isolated in dedicated memory vaults (`WebhookSecretVault`, `DeliveryBodyVault`). Secrets are scrubbed with zeroes (`0x00`) upon delivery exhaustion.
 - **Zero Local Secrets Persistence**: The one-time bootstrap control token is generated in volatile RAM and disclosed exclusively via terminal stdout (SET-02/SET-03).
 - **Public Contract Sanitization**: Public delivery API endpoints sanitize responses through `WebhookDeliveryEntitySchema` to prevent leaking internal scheduler or attempt metadata.
@@ -86,7 +86,7 @@ With PAYSIM, you can simulate realistic payment state transitions, test embedded
 
 - **TypeScript Typecheck**: 0 errors across all 7 workspace packages and test suites.
 - **ESLint Analysis**: 0 errors and 0 warnings.
-- **Vitest Test Suite**: **541 tests passing across 48 test suites** with zero failures.
+- **Vitest Test Suite**: **546 tests passing across 49 test files** with zero failures.
 - **Reproducible Installation**: Clean `npm ci --no-audit --no-fund` validated in isolated directory with zero lockfile mutation.
 - **System Doctor**: 8/8 diagnostic checks passing in `scripts/doctor.mjs`.
 
@@ -99,7 +99,5 @@ PAYSIM is licensed under the [MIT License](LICENSE).
 ```text
 Copyright (c) 2026 PAYSIM Contributors
 ```
-
-*Release Notice:* The candidate copyright holder wording (`PAYSIM Contributors`) is pending explicit repository-owner confirmation prior to public publication.
 
 > **Disclaimer**: PAYSIM does not process real currency, initiate real banking transactions, or store real credit card numbers. It is intended solely for local integration testing, webhook debugging, and developer education.

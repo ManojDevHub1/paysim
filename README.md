@@ -53,9 +53,9 @@ Integrating payment gateways during local development is notoriously painful:
 - **100% Local & Self-Contained**: Binds strictly to `127.0.0.1`. Performs zero outbound external internet requests and requires zero database servers.
 - **Real Loopback Webhook Dispatches**: Sends authentic HTTP `POST` requests to local receiver endpoints via literal loopback addresses (e.g., `http://127.0.0.1:9001/webhook` or `http://[::1]:9001/webhook`; DNS hostnames including `localhost` are strictly rejected for SSRF safety) with timing-safe HMAC-SHA256 signatures (`X-PaySim-Signature`).
 - **Deterministic Simulation Lab**: Simulate any payment outcome on demand: `success`, `failed`, `pending`, or `cancelled` with specific simulated error codes (e.g., `CARD_DECLINED`, `INSUFFICIENT_FUNDS`).
-- **Dual Wire Protocol**: Supports both native PAYSIM API formats and drop-in **Razorpay Orders & Checkout API compatibility** (`/v1/orders`, `X-Razorpay-Signature`).
+- **Dual Wire Protocol**: Supports both native PAYSIM API formats and **selected Razorpay Orders & embedded Checkout endpoint compatibility** (`/v1/orders`, `/v1/checkout/embedded`, `X-Razorpay-Signature`) for testing standard checkout integrations locally.
 - **Interactive Developer Dashboard**: Modern React 18 + Vite developer interface with 9 views: Overview, Orders, Payments, Checkout Simulator, Webhooks, Deliveries, Events, Credentials, and Settings.
-- **Confronting Retry Engine**: Outbound webhook delivery engine with 5 concurrent workers, fixed retry schedule (Immediate, 500ms, 2000ms), and up to 3 manual retry allowances.
+- **Concurrent Webhook Retry Engine**: Outbound webhook delivery engine with 5 concurrent workers, fixed retry schedule (Immediate, 500ms, 2000ms), and up to 3 manual retry allowances.
 - **Safe Bootstrap Control Token**: One-time ephemeral credential generated in volatile RAM and disclosed exclusively via terminal stdout; never persisted to disk (SET-02/SET-03).
 - **One-Command Dev Orchestration**: Launch both the Express backend and React dashboard with pre-flight port checks via `npm run dev`.
 
@@ -164,7 +164,7 @@ For comprehensive lifecycle sequence charts and retry state machines, see **[Arc
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/paysim.git
+git clone https://github.com/ManojDevHub1/paysim.git
 cd paysim
 
 # Install dependencies across all monorepo packages
