@@ -4,7 +4,8 @@
 **Date:** 4 November 2026
 **Status:** Released & Certified Baseline
 **Authoritative Normative PRD:** [`docs/PRD_v2.3.md`](PRD_v2.3.md)
-**Historical Predecessor:** [`docs/PRD_v2.3_RESOLUTION_REGISTER.md`](PRD_v2.3_RESOLUTION_REGISTER.md)
+**Normative Resolution Register:** [`docs/PRD_v2.3_RESOLUTION_REGISTER.md`](PRD_v2.3_RESOLUTION_REGISTER.md)
+**Historical Predecessor:** [`docs/PRD_v2.2_RESOLUTION_REGISTER.md`](PRD_v2.2_RESOLUTION_REGISTER.md)
 **Verified Test Baseline:** 546 tests passing across 49 test files (Vitest)
 **System Doctor Diagnostics:** 8/8 checks passing
 

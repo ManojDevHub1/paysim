@@ -8,7 +8,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Test Suite](https://img.shields.io/badge/Tests-546%20passing-success.svg)](https://vitest.dev/)
-[![Status](https://img.shields.io/badge/Release-v1.0.0--ready-orange.svg)](docs/RELEASE_NOTES_v1.0.0.md)
+[![Latest Release](https://img.shields.io/github/v/release/ManojDevHub1/paysim?label=Latest%20Release)](https://github.com/ManojDevHub1/paysim/releases/latest)
 
 <p align="center">
   A local-first payment gateway simulator and developer testing laboratory with zero external service dependencies.<br />
